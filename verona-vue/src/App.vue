@@ -381,7 +381,7 @@ import {
   ImageIcon, Send, LogOut, Hash, Menu, ChevronLeft, ChevronRight, Plus, Camera, Lock, Unlock, Clock, Gift, Flame
 } from 'lucide-vue-next'; 
 
-const URL_API = 'http://localhost:3000';
+const URL_API = 'https://verona-api.onrender.com';
 let socket = null;
 
 const usuarioLogado = ref(null);
