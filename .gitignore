@@ -1,0 +1,14 @@
+# Ignorar dependências
+node_modules/
+verona-backend/node_modules/
+verona-vue/node_modules/
+
+# Ignorar Banco de Dados Local e Senhas
+*.db
+*.db-journal
+.env
+
+# Ignorar logs e builds
+dist/
+build/
+npm-debug.log*

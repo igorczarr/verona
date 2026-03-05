@@ -1,0 +1,213 @@
+/* src/style.css - Verona Floating UI (iPadOS/macOS Style) */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Quicksand:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-title: 'Playfair Display', serif;
+  --font-text: 'Quicksand', sans-serif;
+  --fluid-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  --smooth-fade: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 1. SISTEMA DE TEMAS CORRIGIDO (Contraste Absoluto) */
+[data-theme="light"] {
+  --bg-app: #E5E7EB; /* Fundo mais escuro para a ilha branca flutuar e dar contraste */
+  --bg-sidebar: rgba(255, 255, 255, 0.85);
+  --bg-surface: #FFFFFF;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border-glass: rgba(0, 0, 0, 0.05);
+  --shadow-ambient: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --accent-color: #E11D48;
+  --accent-glow: rgba(225, 29, 72, 0.15);
+}
+
+[data-theme="dark"] {
+  --bg-app: #09090B; /* Preto absoluto no fundo */
+  --bg-sidebar: rgba(24, 24, 27, 0.85);
+  --bg-surface: #18181B; /* Cinza escuro elegante para as ilhas */
+  --text-main: #F9FAFB;
+  --text-muted: #9CA3AF;
+  --border-glass: rgba(255, 255, 255, 0.05);
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.5);
+  --accent-color: #F43F5E;
+  --accent-glow: rgba(244, 63, 94, 0.2);
+}
+
+[data-theme="romantic"] {
+  --bg-app: #FCE7F3;
+  --bg-sidebar: rgba(255, 255, 255, 0.7);
+  --bg-surface: rgba(255, 255, 255, 0.9);
+  --text-main: #4C1D95;
+  --text-muted: #831843;
+  --border-glass: rgba(255, 255, 255, 0.8);
+  --shadow-ambient: 0 15px 35px rgba(225, 29, 72, 0.1);
+  --accent-color: #BE123C;
+  --accent-glow: rgba(190, 18, 60, 0.2);
+  background-image: radial-gradient(at 0% 0%, hsla(353,100%,92%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(320,100%,92%,1) 0px, transparent 50%), radial-gradient(at 50% 50%, hsla(280,100%,95%,1) 0px, transparent 50%); background-attachment: fixed;
+}
+
+body { margin: 0; font-family: var(--font-text); background-color: var(--bg-app); color: var(--text-main); transition: background-color 0.4s var(--smooth-fade); overflow: hidden; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .playfair { font-family: var(--font-title); font-weight: 800; letter-spacing: -0.5px; }
+
+/* 2. ARQUITETURA DE ILHAS FLUTUANTES (Desktop) */
+.app-master-layout { 
+  display: flex; 
+  height: 100vh; 
+  width: 100vw; 
+  padding: 15px; /* O respiro que descola o app das bordas da tela */
+  gap: 15px; /* Espaço entre a sidebar e o palco */
+  box-sizing: border-box;
+}
+
+/* SIDEBAR FLUTUANTE */
+.desktop-sidebar { 
+  width: 280px; 
+  background: var(--bg-sidebar); 
+  backdrop-filter: blur(40px); 
+  -webkit-backdrop-filter: blur(40px); 
+  border: 1px solid var(--border-glass); 
+  border-radius: 24px; /* Bordas muito arredondadas */
+  display: flex; 
+  flex-direction: column; 
+  padding: 25px 20px; 
+  z-index: 100; 
+  transition: width 0.4s var(--fluid-spring); 
+  box-shadow: var(--shadow-ambient); 
+  position: relative; 
+  white-space: nowrap; 
+}
+
+.desktop-sidebar.collapsed { width: 85px; padding: 25px 10px; align-items: center; }
+
+/* BUG DO MENU RESOLVIDO E POSICIONADO COM ELEGÂNCIA */
+.toggle-btn { 
+  position: absolute; 
+  top: 25px; 
+  right: 15px; 
+  background: var(--bg-surface); 
+  border: 1px solid var(--border-glass); 
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted); 
+  cursor: pointer; 
+  transition: all 0.3s var(--fluid-spring); 
+  z-index: 10; 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.toggle-btn:hover { color: var(--accent-color); transform: scale(1.1); }
+.desktop-sidebar.collapsed .toggle-btn { right: 50%; transform: translateX(50%); top: 20px; }
+
+.workspace-brand { display: flex; align-items: center; gap: 12px; font-size: 26px; color: var(--accent-color); margin-bottom: 40px; padding-right: 35px; }
+.desktop-sidebar.collapsed .brand-text { opacity: 0; display: none; }
+
+/* NAVEGAÇÃO INTERNA */
+.channel-group { margin-bottom: 30px; width: 100%; }
+.nav-section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
+.desktop-sidebar.collapsed .nav-section-title { display: none; }
+.add-channel-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+.add-channel-btn:hover { color: var(--accent-color); transform: scale(1.2); }
+
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--text-main); transition: all 0.2s; margin-bottom: 4px; opacity: 0.8; }
+.nav-item:hover { background: var(--border-glass); opacity: 1; transform: translateX(4px); }
+.nav-item.active { background: var(--accent-color); color: white; opacity: 1; box-shadow: 0 4px 15px var(--accent-glow); }
+.desktop-sidebar.collapsed .nav-item { justify-content: center; padding: 12px; }
+.desktop-sidebar.collapsed .nav-text { display: none; }
+
+/* 3. PALCO CENTRAL (Main Stage Flutuante) */
+.main-stage { 
+  flex: 1; 
+  background: var(--bg-surface);
+  border-radius: 24px;
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-ambient);
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; /* Scroll movido para o wrapper interno */
+  position: relative; 
+}
+
+/* O Header do Palco */
+.stage-header { 
+  padding: 20px 30px; 
+  border-bottom: 1px solid var(--border-glass); 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  background: rgba(var(--bg-surface), 0.5);
+  z-index: 10;
+}
+.stage-title { margin: 0; font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+
+/* Scroll Interno do Conteúdo */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+}
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 10px; }
+
+/* 4. POSTS & METADADOS (Datas/Horas) */
+.post-glass-card { background: var(--bg-app); border-radius: 20px; padding: 25px; margin-bottom: 25px; border: 1px solid var(--border-glass); display: flex; gap: 20px; transition: transform 0.2s; }
+.avatar-img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, var(--accent-glow), var(--accent-color)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
+.post-content { flex: 1; }
+.post-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.post-author { font-family: var(--font-title); font-size: 18px; color: var(--text-main); font-weight: 800; }
+.post-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 500; } /* A Data/Hora exigida */
+.post-text { font-size: 16px; line-height: 1.6; color: var(--text-main); margin-bottom: 15px; white-space: pre-wrap; }
+
+/* 5. A CAIXA DE MENSAGEM (Fixa no Rodapé como o Slack) */
+.composer-footer-anchor {
+  padding: 20px 30px;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-surface);
+}
+
+.immersive-composer { 
+  background: var(--bg-app); 
+  border-radius: 20px; 
+  padding: 15px 20px; 
+  border: 1px solid var(--border-glass); 
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s var(--smooth-fade); 
+}
+.immersive-composer:focus-within { box-shadow: 0 0 0 2px var(--accent-glow); border-color: var(--accent-color); }
+
+.composer-textarea { 
+  width: 100%; 
+  border: none; 
+  outline: none; 
+  font-size: 16px; 
+  font-family: var(--font-text); 
+  resize: none; 
+  min-height: 24px; 
+  max-height: 150px;
+  background: transparent; 
+  color: var(--text-main); 
+  line-height: 1.5; 
+}
+.composer-textarea::placeholder { color: var(--text-muted); }
+
+.composer-toolbar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.btn-magic { background: var(--accent-color); color: white; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px var(--accent-glow); transition: all 0.2s; }
+.btn-magic:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); }
+.btn-magic:active { transform: translateY(0); }
+
+/* Temas Buttons */
+.theme-selector { display: flex; gap: 8px; background: var(--border-glass); padding: 5px; border-radius: 20px; }
+.theme-btn { width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+.theme-btn:hover { transform: scale(1.1); }
+.theme-btn.t-light { background: #FFFFFF; border: 1px solid #E5E7EB; }
+.theme-btn.t-dark { background: #111827; }
+.theme-btn.t-romantic { background: linear-gradient(135deg, #F43F5E, #E11D48); }
+
+/* Helpers */
+.glass-input { width: 100%; padding: 14px 18px; background: var(--bg-app); border: 1px solid var(--border-glass); border-radius: 12px; font-size: 15px; outline: none; transition: 0.3s; box-sizing: border-box; margin-bottom: 15px; color: var(--text-main); }
+.glass-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px var(--accent-glow); }
