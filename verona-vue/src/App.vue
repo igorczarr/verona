@@ -11,6 +11,7 @@
           <template v-if="modoAuth === 'register'">
             <input type="text" class="glass-input" placeholder="Como quer ser chamado?" v-model="nome" required />
             <input type="text" class="glass-input" placeholder="@usuario" v-model="username" required />
+            <input type="text" class="glass-input" placeholder="Nome do casal (Ex: Igor & Julieta)" v-model="coupleName" required />
           </template>
           
           <input type="email" class="glass-input" placeholder="Seu e-mail" v-model="email" required />
@@ -40,7 +41,7 @@
        <div style="background: var(--bg-surface); padding: 40px; border-radius: 30px; max-width: 400px; border: 1px solid var(--border-glass); box-shadow: var(--shadow-ambient)">
           <Heart :size="60" color="var(--accent-color)" style="margin-bottom: 20px" />
           <h2 class="playfair">Falta pouco!</h2>
-          <p style="color: var(--text-muted)">Envie este código para o seu amor usar no cadastro (é gratuito para ele):</p>
+          <p style="color: var(--text-muted)">Envie este código para o seu amor usar no cadastro:</p>
           <h3 style="background: rgba(128,128,128,0.1); padding: 20px; border-radius: 15px; letter-spacing: 3px; color: var(--accent-color); font-size: 24px;">{{ usuarioLogado.relationship.inviteCode }}</h3>
           <button class="btn-magic" style="margin: 0 auto; width: 100%" @click="copiarCodigo">Copiar Código</button>
        </div>
@@ -92,19 +93,23 @@
         </div>
 
         <div class="channel-group">
-          <div class="nav-section-title"><span v-show="!sidebarCollapsed">Nós</span></div>
+          <div class="nav-section-title"><span v-show="!sidebarCollapsed">O Casal</span></div>
           <div class="nav-item" :class="{ active: abaAtiva === 'nosso-perfil' }" @click="mudarAba('nosso-perfil')">
             <Heart :size="18" style="flex-shrink: 0; opacity: 0.7;" /> 
-            <span class="nav-text" v-show="!sidebarCollapsed">Nosso Mundo</span>
+            <span class="nav-text" v-show="!sidebarCollapsed">{{ usuarioLogado.relationship.name }}</span>
           </div>
-          <div class="nav-item" :class="{ active: abaAtiva === 'meu-perfil' }" @click="mudarAba('meu-perfil')">
+          <div class="nav-item" :class="{ active: abaAtiva === 'encontros' }" @click="mudarAba('encontros')">
+            <Calendar :size="18" style="flex-shrink: 0; opacity: 0.7;" /> 
+            <span class="nav-text" v-show="!sidebarCollapsed">Encontros</span>
+          </div>
+          <div class="nav-item" :class="{ active: abaAtiva === 'nossos-perfis' }" @click="mudarAba('nossos-perfis')">
             <UserIcon :size="18" style="flex-shrink: 0; opacity: 0.7;" /> 
             <span class="nav-text" v-show="!sidebarCollapsed">Nossos Perfis</span>
           </div>
         </div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
-           <button @click="enviarSaudade" class="btn-magic" style="width: 100%; background: linear-gradient(135deg, #F43F5E, #E11D48); padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px;">
+           <button @click="abrirModalSaudade" class="btn-magic" style="width: 100%; background: linear-gradient(135deg, #F43F5E, #E11D48); padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px;">
              <Flame :size="18"/> <span v-show="!sidebarCollapsed" style="font-weight: bold">Pensando em você</span>
            </button>
            <div class="nav-item" style="color: #EF4444; margin-top: 10px;" @click="fazerLogout">
@@ -118,10 +123,11 @@
         <header class="stage-header">
           <h2 class="stage-title playfair">
             <template v-if="abaAtiva === 'feed' && canalAtivo"><span style="color: var(--accent-color)">#</span> {{ canalAtivo.name }}</template>
-            <template v-else-if="abaAtiva === 'meu-perfil'">Configurar Perfis</template>
-            <template v-else>Nosso Mundo</template>
+            <template v-else-if="abaAtiva === 'nossos-perfis'">Nossos Perfis</template>
+            <template v-else-if="abaAtiva === 'encontros'">Ideias de Encontros</template>
+            <template v-else>{{ usuarioLogado.relationship.name }}</template>
           </h2>
-          <div style="font-size: 28px; cursor: help;" :title="'Humor atual do parceiro'">{{ obterIconeHumor(usuarioLogado.moodStatus) }}</div>
+          <div style="font-size: 28px; cursor: help;" :title="'Seu parceiro(a) está se sentindo: ' + (parceiro?.moodStatus || 'Neutro')">{{ obterIconeHumor(parceiro?.moodStatus) }}</div>
         </header>
 
         <template v-if="abaAtiva === 'feed'">
@@ -170,7 +176,10 @@
                     <div style="font-weight: bold; color: var(--text-main)">Cápsula do Tempo</div>
                     <div style="font-size: 13px; color: var(--text-muted)">Abre em: {{ formatarData(post.unlockAt) }}</div>
                   </div>
-                  <div v-else style="font-size: 16px; line-height: 1.5; color: var(--text-main); margin-bottom: 15px;">{{ post.content }}</div>
+                  <div v-else>
+                     <div style="font-size: 16px; line-height: 1.5; color: var(--text-main); margin-bottom: 15px; white-space: pre-wrap;">{{ post.content }}</div>
+                     <img v-if="post.imageUrl" :src="post.imageUrl" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 16px; margin-bottom: 15px; border: 1px solid var(--border-glass);" />
+                  </div>
                   
                   <div v-if="!estaTrancado(post.unlockAt)" style="display: flex; gap: 20px; color: var(--text-muted);">
                     <div @click="toggleRespostas(post)" style="display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s" :style="{color: post.mostrarRespostas ? 'var(--accent-color)' : ''}">
@@ -209,8 +218,10 @@
                <textarea class="composer-textarea" placeholder="O que você quer compartilhar hoje?" v-model="novoTexto" @keydown.enter.prevent="enviarPost"></textarea>
                <div class="composer-toolbar">
                  <div style="display: flex; align-items: center; gap: 20px;">
-                   <div style="color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px">
-                      <ImageIcon :size="20" /> <span style="font-size: 14px; font-weight: 600">Foto</span>
+                   <input type="file" ref="postInputRef" style="display: none" accept="image/*" @change="onPostImageSelected" />
+                   <div style="color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px" @click="() => postInputRef.click()">
+                      <ImageIcon :size="20" :color="imagemPostBase64 ? 'var(--accent-color)' : 'currentColor'" /> 
+                      <span style="font-size: 14px; font-weight: 600" :style="{color: imagemPostBase64 ? 'var(--accent-color)' : ''}">{{ imagemPostBase64 ? 'Foto Anexada' : 'Foto' }}</span>
                    </div>
                    <div style="color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px" @click="modoCapsula = !modoCapsula">
                       <Clock :size="18" :color="modoCapsula ? 'var(--accent-color)' : 'currentColor'" /> <span style="font-size: 14px; font-weight: 600" :style="{color: modoCapsula ? 'var(--accent-color)' : ''}">Cápsula do Tempo</span>
@@ -226,34 +237,43 @@
           </div>
         </template>
 
+        <template v-if="abaAtiva === 'encontros'">
+           <div class="scroll-area" style="max-width: 800px; margin: 0 auto; width: 100%; padding-top: 20px;">
+              <div style="background: linear-gradient(135deg, var(--accent-glow), rgba(0,0,0,0.02)); border: 1px solid var(--accent-color); border-radius: 30px; padding: 40px; text-align: center; box-shadow: 0 10px 30px var(--accent-glow);">
+                  <Sparkles :size="40" color="var(--accent-color)" style="margin: 0 auto 20px auto;"/>
+                  <h2 class="playfair" style="font-size: 32px; margin: 0 0 10px 0;">Roleta de Encontros</h2>
+                  <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 30px;">Sem ideias do que fazer hoje? Deixe o destino escolher por vocês.</p>
+                  
+                  <div v-if="ideaSorteada" style="background: var(--bg-surface); padding: 30px; border-radius: 20px; border: 2px dashed var(--accent-color); margin-bottom: 30px; animation: slideUp 0.4s ease-out;">
+                    <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 10px; font-weight: bold;">O Encontro de Hoje será:</div>
+                    <div style="font-size: 24px; font-weight: bold; color: var(--text-main);">{{ ideaSorteada.title }}</div>
+                  </div>
+
+                  <button class="btn-magic" style="padding: 15px 40px; font-size: 18px; border-radius: 40px;" @click="girarRoleta">Girar a Roleta 🎲</button>
+              </div>
+           </div>
+        </template>
+
         <template v-if="abaAtiva === 'nosso-perfil'">
           <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+             
              <div style="flex-shrink: 0; position: relative; height: 250px; border-bottom: 1px solid var(--border-glass);">
-                <img src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&fit=crop" style="width: 100%; height: 100%; object-fit: cover;" />
-                <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; justify-content: flex-end; padding: 30px;">
-                   <h2 class="playfair" style="color: white; font-size: 42px; margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">Nosso Mundo</h2>
-                   <div style="color: rgba(255,255,255,0.8); font-size: 14px; display: flex; align-items: center; gap: 8px; margin-top: 5px;">
-                     <Music :size="14"/> <span style="cursor: pointer; text-decoration: underline" @click="tocarMusicaDoCasal">Ouvir nossa playlist</span>
-                   </div>
+                <img :src="usuarioLogado.relationship.coverImageUrl || 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&fit=crop'" style="width: 100%; height: 100%; object-fit: cover;" />
+                <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 30px;">
+                   <h2 class="playfair" style="color: white; font-size: 48px; margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">{{ usuarioLogado.relationship.name }}</h2>
                 </div>
+                
+                <input type="file" ref="relCoverInputRef" style="display: none" accept="image/*" @change="onRelCoverSelected" />
+                <button @click="() => relCoverInputRef.click()" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 8px;">
+                  <Camera :size="14"/> Alterar Capa
+                </button>
              </div>
 
              <div class="scroll-area nos-mundo-pad" style="flex: 1; padding: 30px 40px; overflow-y: auto;">
                
-               <div style="background: linear-gradient(135deg, var(--accent-glow), rgba(0,0,0,0.02)); border: 1px solid var(--accent-color); border-radius: 20px; padding: 25px; margin-bottom: 40px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 5px 20px var(--accent-glow); flex-wrap: wrap; gap: 20px;">
-                  <div>
-                    <h3 class="playfair" style="margin: 0; font-size: 22px; display: flex; align-items: center; gap: 10px;"><Sparkles :size="22" color="var(--accent-color)"/> Encontro Surpresa</h3>
-                    <div v-if="ideaSorteada" style="margin-top: 10px; font-size: 18px; font-weight: bold; color: var(--accent-color); background: var(--bg-surface); padding: 10px 20px; border-radius: 12px; display: inline-block;">
-                      {{ ideaSorteada.title }}
-                    </div>
-                  </div>
-                  <button class="btn-magic" style="padding: 12px 30px; font-size: 15px; border-radius: 30px;" @click="girarRoleta">Girar a Roleta</button>
-               </div>
-
                <div style="margin-bottom: 40px;">
                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
                    <h3 class="playfair" style="font-size: 24px; margin: 0;">Nossos Momentos</h3>
-                   
                    <input type="file" ref="memoryInputRef" style="display: none" accept="image/*" @change="onMemorySelected" />
                    <button @click="triggerMemoryInput" style="background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;">+ Adicionar</button>
                  </div>
@@ -275,7 +295,6 @@
                           </div>
                        </div>
                     </div>
-                    
                     <div @click="triggerMemoryInput" class="gallery-card-vertical empty-add" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border-glass); background: var(--bg-app); cursor: pointer;">
                       <Plus :size="30" color="var(--text-muted)" style="margin-bottom: 10px;" />
                       <span style="color: var(--text-muted); font-weight: bold;">Nova Memória</span>
@@ -303,10 +322,8 @@
                  </div>
 
                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h4 class="playfair" style="margin: 0; font-size: 20px">Nossos Sonhos (Metas)</h4>
-                    <button v-if="editandoDatas" @click="adicionarMeta" style="background: var(--accent-color); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                      <Plus :size="16" />
-                    </button>
+                    <h4 class="playfair" style="margin: 0; font-size: 20px">Nossos Sonhos</h4>
+                    <button v-if="editandoDatas" @click="adicionarMeta" style="background: var(--accent-color); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><Plus :size="16" /></button>
                  </div>
                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
                     <div v-for="meta in metasCasal" :key="meta.id" style="background: var(--bg-app); padding: 15px; border-radius: 16px; border: 1px dashed var(--accent-color); display: flex; align-items: center; gap: 12px;">
@@ -320,43 +337,114 @@
           </div>
         </template>
 
-        <template v-if="abaAtiva === 'meu-perfil'">
-          <div class="scroll-area" style="max-width: 600px; margin: 0 auto; width: 100%; padding-top: 40px;">
+        <template v-if="abaAtiva === 'nossos-perfis'">
+          <div class="scroll-area" style="padding-top: 20px;">
              
-             <div style="background: var(--bg-surface); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid var(--border-glass); box-shadow: var(--shadow-ambient);">
-               <div style="position: relative; display: inline-block; margin-bottom: 20px;">
-                  <div class="avatar-img" style="width: 140px; height: 140px; font-size: 48px; border: 4px solid var(--bg-app); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-                     <img v-if="usuarioLogado.avatarUrl" :src="usuarioLogado.avatarUrl" style="width: 100%; height: 100%; object-fit: cover;" />
-                     <template v-else>{{ getInicial(usuarioLogado.name) }}</template>
-                  </div>
-                  <input type="file" ref="fileInputRef" style="display: none" accept="image/*" @change="onFileSelected" />
-                  <button @click="triggerFileInput" style="position: absolute; bottom: 5px; right: 5px; background: var(--accent-color); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                    <Camera :size="16" />
-                  </button>
-               </div>
-               
-               <h2 class="playfair" style="margin: 0 0 5px 0; font-size: 28px;">{{ usuarioLogado.name }}</h2>
-               <p style="color: var(--text-muted); margin: 0 0 30px 0; font-size: 15px;">@{{ usuarioLogado.username }}</p>
-
-               <div style="background: var(--bg-app); padding: 25px; border-radius: 20px; text-align: left;">
-                  <h3 class="playfair" style="margin: 0 0 15px 0; font-size: 18px;">Termômetro de Humor</h3>
-                  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                    <button v-for="mood in moodOptions" :key="mood.id" @click="atualizarHumor(mood.id)"
-                      :style="{
-                        background: usuarioLogado.moodStatus === mood.id ? 'var(--accent-color)' : 'transparent',
-                        color: usuarioLogado.moodStatus === mood.id ? 'white' : 'var(--text-main)',
-                        border: '1px solid ' + (usuarioLogado.moodStatus === mood.id ? 'var(--accent-color)' : 'var(--border-glass)'),
-                        padding: '10px 16px', borderRadius: '30px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
-                      }">
-                      <span>{{ mood.icon }}</span> {{ mood.label }}
-                    </button>
-                  </div>
-               </div>
+             <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;">
+                <button @click="perfilVisivel = 'me'" :class="{ 'btn-magic': perfilVisivel === 'me' }" style="padding: 10px 30px; border-radius: 30px; border: 1px solid var(--border-glass); background: transparent; color: var(--text-main); font-weight: bold; cursor: pointer;" :style="perfilVisivel === 'me' ? 'color: white; border:none;' : ''">
+                   {{ usuarioLogado.name }}
+                </button>
+                <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{ 'btn-magic': perfilVisivel === 'partner' }" style="padding: 10px 30px; border-radius: 30px; border: 1px solid var(--border-glass); background: transparent; color: var(--text-main); font-weight: bold; cursor: pointer;" :style="perfilVisivel === 'partner' ? 'color: white; border:none;' : ''">
+                   {{ parceiro.name }}
+                </button>
              </div>
-             
+
+             <div v-if="perfilDados" style="max-width: 600px; margin: 0 auto; width: 100%;">
+               
+               <div style="background: var(--bg-surface); border-radius: 30px; border: 1px solid var(--border-glass); box-shadow: var(--shadow-ambient); overflow: hidden; margin-bottom: 30px;">
+                 <div style="height: 150px; background: var(--bg-app); position: relative;">
+                    <img v-if="perfilDados.coverUrl" :src="perfilDados.coverUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                    <button v-if="perfilVisivel === 'me'" @click="() => profileCoverInputRef.click()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                      <Camera :size="12" /> Capa
+                    </button>
+                    <input type="file" ref="profileCoverInputRef" style="display: none" accept="image/*" @change="onProfileCoverSelected" />
+                 </div>
+
+                 <div style="padding: 0 30px 30px 30px; text-align: center; margin-top: -50px; position: relative;">
+                    <div style="position: relative; display: inline-block; margin-bottom: 15px;">
+                      <div class="avatar-img" style="width: 100px; height: 100px; font-size: 32px; border: 4px solid var(--bg-surface); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                         <img v-if="perfilDados.avatarUrl" :src="perfilDados.avatarUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                         <template v-else>{{ getInicial(perfilDados.name) }}</template>
+                      </div>
+                      <button v-if="perfilVisivel === 'me'" @click="triggerFileInput" style="position: absolute; bottom: 0px; right: 0px; background: var(--accent-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center;">
+                        <Camera :size="14" />
+                      </button>
+                      <input type="file" ref="fileInputRef" style="display: none" accept="image/*" @change="onFileSelected" />
+                    </div>
+                    
+                    <h2 class="playfair" style="margin: 0 0 5px 0; font-size: 24px;">{{ perfilDados.name }}</h2>
+                    <p style="color: var(--text-muted); margin: 0 0 15px 0; font-size: 14px;">@{{ perfilDados.username }}</p>
+                    
+                    <div v-if="perfilVisivel === 'me' && editandoBio">
+                       <textarea class="glass-input" v-model="novaBio" placeholder="Escreva algo sobre você..." style="height: 80px; resize: none; font-size: 14px; text-align: center;"></textarea>
+                       <button class="btn-magic" style="padding: 5px 15px; font-size: 12px; margin-bottom: 15px;" @click="salvarBio">Salvar Bio</button>
+                    </div>
+                    <div v-else @click="perfilVisivel === 'me' ? editandoBio = true : null" :style="{ cursor: perfilVisivel === 'me' ? 'pointer' : 'default' }" style="font-size: 15px; color: var(--text-main); margin-bottom: 20px; line-height: 1.5;">
+                       {{ perfilDados.bio || (perfilVisivel === 'me' ? 'Clique para adicionar uma biografia.' : 'Sem biografia.') }}
+                    </div>
+
+                    <div style="background: var(--bg-app); padding: 15px; border-radius: 16px;">
+                       <h3 style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Termômetro Emocional</h3>
+                       
+                       <div v-if="perfilVisivel === 'me'" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;">
+                          <button v-for="mood in moodOptions" :key="mood.id" @click="atualizarHumor(mood.id)"
+                            :style="{
+                              background: perfilDados.moodStatus === mood.id ? 'var(--accent-color)' : 'transparent',
+                              color: perfilDados.moodStatus === mood.id ? 'white' : 'var(--text-main)',
+                              border: '1px solid ' + (perfilDados.moodStatus === mood.id ? 'var(--accent-color)' : 'var(--border-glass)'),
+                              padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px'
+                            }">
+                            <span>{{ mood.icon }}</span> {{ mood.label }}
+                          </button>
+                       </div>
+                       <div v-else style="display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: bold; color: var(--accent-color);">
+                          {{ obterIconeHumor(perfilDados.moodStatus) }} {{ obterLabelHumor(perfilDados.moodStatus) || 'Neutro' }}
+                       </div>
+                    </div>
+                 </div>
+               </div>
+
+               <div style="margin-bottom: 30px;">
+                 <h3 class="playfair" style="font-size: 20px; margin-bottom: 15px;">Mural Pessoal</h3>
+                 
+                 <div v-if="perfilVisivel === 'me'" style="background: var(--bg-surface); padding: 15px; border-radius: 20px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+                    <textarea class="glass-input" v-model="novoPostPerfilTexto" placeholder="Escreva algo no seu mural..." style="height: 60px; margin-bottom: 10px; border: none; background: transparent; padding: 0; box-shadow: none;"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                       <input type="file" ref="profilePostInputRef" style="display: none" accept="image/*" @change="onProfilePostImageSelected" />
+                       <button @click="() => profilePostInputRef.click()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                         <ImageIcon :size="16" :color="novoPostPerfilImg ? 'var(--accent-color)' : 'currentColor'" /> <span style="font-size: 13px;">{{ novoPostPerfilImg ? 'Foto Anexada' : 'Foto' }}</span>
+                       </button>
+                       <button class="btn-magic" style="padding: 6px 15px; font-size: 13px;" @click="enviarPostPerfil">Postar</button>
+                    </div>
+                 </div>
+
+                 <div v-for="post in profilePosts" :key="post.id" style="background: var(--bg-surface); padding: 20px; border-radius: 20px; border: 1px solid var(--border-glass); margin-bottom: 15px;">
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">{{ formatarDataHora(post.createdAt) }}</div>
+                    <div style="font-size: 15px; line-height: 1.5; color: var(--text-main); margin-bottom: 10px;">{{ post.content }}</div>
+                    <img v-if="post.imageUrl" :src="post.imageUrl" style="width: 100%; border-radius: 12px;" />
+                 </div>
+                 <div v-if="profilePosts.length === 0" style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; border: 1px dashed var(--border-glass); border-radius: 20px;">
+                    O mural de {{ perfilDados.name }} está vazio.
+                 </div>
+               </div>
+
+             </div>
           </div>
         </template>
       </main>
+
+      <div v-if="modalSaudadeAberto" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+         <div style="background: var(--bg-surface); padding: 30px; border-radius: 24px; border: 1px solid var(--border-glass); box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 400px; width: 100%; text-align: center; animation: slideUp 0.3s ease-out;">
+            <Flame :size="50" color="#F43F5E" style="margin: 0 auto 15px auto;" />
+            <h3 class="playfair" style="font-size: 24px; margin: 0 0 10px 0;">Mandando um sinal</h3>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Escreva um bilhete rápido. Ele chegará direto no e-mail do seu amor.</p>
+            <textarea class="glass-input" v-model="textoSaudade" placeholder="Estou pensando no seu sorriso..." style="height: 100px; resize: none; margin-bottom: 20px;"></textarea>
+            <div style="display: flex; gap: 15px;">
+               <button @click="modalSaudadeAberto = false" style="flex: 1; padding: 12px; border-radius: 12px; background: transparent; border: 1px solid var(--border-glass); color: var(--text-muted); cursor: pointer; font-weight: bold;">Cancelar</button>
+               <button @click="dispararSaudade" class="btn-magic" style="flex: 1; background: linear-gradient(135deg, #F43F5E, #E11D48); border: none;">Enviar ❤️</button>
+            </div>
+         </div>
+      </div>
 
       <div class="chat-widget-container" :class="{ 'chat-open': isChatOpen }">
         <button class="chat-trigger-btn" @click="isChatOpen = !isChatOpen">
@@ -367,29 +455,18 @@
         <div class="chat-window" v-if="isChatOpen">
           <div class="chat-window-header">
             <span class="playfair" style="font-size: 18px; font-weight: bold;">Nosso Chat</span>
-            <div style="font-size: 12px; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px;">
-              <Lock :size="12"/> Protegido
-            </div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px;"><Lock :size="12"/> Protegido</div>
           </div>
           
           <div class="chat-window-messages scroll-area hide-scrollbar" style="display: flex; flex-direction: column; gap: 15px; padding: 20px;">
-             <div v-for="(msg, idx) in mensagensChat" :key="idx" 
-                  :style="{
-                    alignSelf: msg.authorId === usuarioLogado.id ? 'flex-end' : 'flex-start',
-                    display: 'flex', flexDirection: msg.authorId === usuarioLogado.id ? 'row-reverse' : 'row', gap: '8px', maxWidth: '90%'
-                  }">
+             <div v-for="(msg, idx) in mensagensChat" :key="idx" :style="{ alignSelf: msg.authorId === usuarioLogado.id ? 'flex-end' : 'flex-start', display: 'flex', flexDirection: msg.authorId === usuarioLogado.id ? 'row-reverse' : 'row', gap: '8px', maxWidth: '90%' }">
                <div class="avatar-img" style="width: 28px; height: 28px; font-size: 10px; flex-shrink: 0; box-shadow: none; overflow: hidden;">
                  <img v-if="msg.authorAvatarUrl" :src="msg.authorAvatarUrl" style="width: 100%; height: 100%; object-fit: cover;" />
                  <template v-else>{{ getInicial(msg.authorName) }}</template>
                </div>
                <div style="display: flex; flex-direction: column;">
-                 <div :style="{
-                      background: msg.authorId === usuarioLogado.id ? 'var(--accent-color)' : 'var(--bg-app)', color: msg.authorId === usuarioLogado.id ? 'white' : 'var(--text-main)',
-                      padding: '10px 15px', borderTopRightRadius: msg.authorId === usuarioLogado.id ? '4px' : '16px', borderTopLeftRadius: msg.authorId !== usuarioLogado.id ? '4px' : '16px', borderRadius: '16px', border: msg.authorId !== usuarioLogado.id ? '1px solid var(--border-glass)' : 'none', fontSize: '14px', lineHeight: '1.4'
-                    }">{{ msg.texto }}</div>
-                 <div :style="{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: msg.authorId === usuarioLogado.id ? 'right' : 'left' }">
-                   {{ formatarHora(msg.id) }}
-                 </div>
+                 <div :style="{ background: msg.authorId === usuarioLogado.id ? 'var(--accent-color)' : 'var(--bg-app)', color: msg.authorId === usuarioLogado.id ? 'white' : 'var(--text-main)', padding: '10px 15px', borderTopRightRadius: msg.authorId === usuarioLogado.id ? '4px' : '16px', borderTopLeftRadius: msg.authorId !== usuarioLogado.id ? '4px' : '16px', borderRadius: '16px', border: msg.authorId !== usuarioLogado.id ? '1px solid var(--border-glass)' : 'none', fontSize: '14px', lineHeight: '1.4' }">{{ msg.texto }}</div>
+                 <div :style="{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: msg.authorId === usuarioLogado.id ? 'right' : 'left' }">{{ formatarHora(msg.id) }}</div>
                </div>
              </div>
           </div>
@@ -406,19 +483,19 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted, onMounted, reactive } from 'vue';
+import { ref, watch, computed, onUnmounted, onMounted, reactive } from 'vue';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { 
-  Heart, MessageCircle, Sparkles, UserIcon, Music, X,
+  Heart, MessageCircle, Sparkles, UserIcon, X, Calendar,
   ImageIcon, Send, LogOut, Hash, Menu, ChevronLeft, ChevronRight, Plus, Camera, Lock, Unlock, Clock, Gift, Flame
 } from 'lucide-vue-next'; 
 
-// LIGAÇÃO COM O MOTOR (Substitua pela sua URL final quando for subir a API)
-const URL_API = 'https://verona-api.onrender.com';
+const URL_API = 'http://localhost:3000'; // Substitua pela OnRender depois
 let socket = null;
 
 const usuarioLogado = ref(null);
+const parceiro = ref(null); // Parceiro injetado no login
 const modoAuth = ref('login');
 const nome = ref('');
 const email = ref('');
@@ -426,11 +503,31 @@ const username = ref('');
 const senha = ref('');
 const codigoConvite = ref('');
 const licenseKey = ref('');
+const coupleName = ref(''); // NOVO: Nome do casal no cadastro
 
 const sidebarCollapsed = ref(false);
 const isMobileMenuOpen = ref(false);
 const isChatOpen = ref(false);
 const abaAtiva = ref('feed'); 
+
+// MODAL SAUDADE
+const modalSaudadeAberto = ref(false);
+const textoSaudade = ref('');
+
+// PERFIL DUPLO
+const perfilVisivel = ref('me'); // 'me' ou 'partner'
+const editandoBio = ref(false);
+const novaBio = ref('');
+const profilePosts = ref([]);
+const novoPostPerfilTexto = ref('');
+const novoPostPerfilImg = ref('');
+const profilePostInputRef = ref(null);
+const profileCoverInputRef = ref(null);
+
+const perfilDados = computed(() => {
+  if (perfilVisivel.value === 'me') return usuarioLogado.value;
+  return parceiro.value;
+});
 
 const canais = ref([]);
 const canalAtivo = ref(null);
@@ -439,6 +536,9 @@ const novoCanalNome = ref('');
 
 const feed = ref([]);
 const novoTexto = ref('');
+const postInputRef = ref(null);
+const imagemPostBase64 = ref('');
+
 const mensagensChat = ref([]);
 const novaMensagemChat = ref('');
 
@@ -448,7 +548,6 @@ const ideaSorteada = ref(null);
 const modoCapsula = ref(false);
 const dataCapsula = ref('');
 
-const formMeuPerfil = reactive({ name: '', username: '' });
 const moodOptions = [
   { id: 'exhausted', icon: '🔋', label: 'Bateria Fraca' },
   { id: 'romantic', icon: '🍷', label: 'Querendo Romance' },
@@ -460,9 +559,9 @@ const editandoDatas = ref(false);
 const formDatas = reactive({ startDate: '', firstKiss: '' });
 const metasCasal = ref([]); 
 
-// A GALERIA AGORA É REAL E VEM DO CLOUDINARY
 const galeriaReal = ref([]); 
 const memoryInputRef = ref(null);
+const relCoverInputRef = ref(null);
 
 const configurarAxiosToken = (token) => { axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; };
 
@@ -470,7 +569,7 @@ const mudarAba = (aba) => { abaAtiva.value = aba; isMobileMenuOpen.value = false
 const mudarCanal = (canal) => { canalAtivo.value = canal; abaAtiva.value = 'feed'; isMobileMenuOpen.value = false; };
 
 // ==========================================
-// 🛡️ PERSISTÊNCIA E CARREGAMENTO
+// 🛡️ PERSISTÊNCIA 
 // ==========================================
 onMounted(async () => {
   const tokenSalvo = localStorage.getItem('verona_token');
@@ -479,6 +578,8 @@ onMounted(async () => {
     try {
       const res = await axios.get(`${URL_API}/auth/me`);
       usuarioLogado.value = { ...res.data.user, relationship: res.data.relationship };
+      parceiro.value = res.data.partner;
+      novaBio.value = usuarioLogado.value.bio || '';
     } catch (e) { localStorage.removeItem('verona_token'); }
   }
 });
@@ -488,7 +589,7 @@ watch(() => usuarioLogado.value, (user) => {
     carregarCanais();
     carregarDailyQuestion();
     carregarHistoricoChat(); 
-    carregarMemories(); // Busca as fotos reais na nuvem!
+    carregarMemories(); 
     
     formDatas.startDate = user.relationship.startDate ? user.relationship.startDate.split('T')[0] : '';
     formDatas.firstKiss = user.relationship.firstKiss ? user.relationship.firstKiss.split('T')[0] : '';
@@ -503,133 +604,177 @@ watch(() => usuarioLogado.value, (user) => {
 });
 
 watch(() => canalAtivo.value, (canal) => { if (canal) carregarFeed(); });
+watch(() => perfilVisivel.value, () => { carregarMuralPerfil(); editandoBio.value = false; });
+watch(() => abaAtiva.value, (aba) => { if (aba === 'nossos-perfis') carregarMuralPerfil(); });
 
 // ==========================================
-// 📸 MOTOR CLOUDINARY PARA O CARROSSEL (NOVO)
+// MURAIS E PERFIL DUPLO
 // ==========================================
-const carregarMemories = async () => {
+const carregarMuralPerfil = async () => {
+  if (!perfilDados.value) return;
   try {
-    const res = await axios.get(`${URL_API}/memories`);
-    galeriaReal.value = res.data;
-  } catch(e) { console.error(e); }
+    const res = await axios.get(`${URL_API}/profile-posts/${perfilDados.value.id}`);
+    profilePosts.value = res.data;
+  } catch(e) {}
 };
 
-const triggerMemoryInput = () => { if (memoryInputRef.value) memoryInputRef.value.click(); };
+const onProfilePostImageSelected = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { novoPostPerfilImg.value = ev.target.result; };
+  reader.readAsDataURL(file);
+};
 
+const enviarPostPerfil = async () => {
+  if (!novoPostPerfilTexto.value.trim() && !novoPostPerfilImg.value) return;
+  try {
+    await axios.post(`${URL_API}/profile-posts`, { content: novoPostPerfilTexto.value, imageUrl: novoPostPerfilImg.value });
+    novoPostPerfilTexto.value = ''; novoPostPerfilImg.value = '';
+    carregarMuralPerfil();
+  } catch(e) {}
+};
+
+const salvarBio = async () => {
+  try {
+    await axios.put(`${URL_API}/users/me`, { bio: novaBio.value });
+    usuarioLogado.value.bio = novaBio.value;
+    editandoBio.value = false;
+  } catch(e) {}
+};
+
+const onProfileCoverSelected = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const b64 = ev.target.result;
+    usuarioLogado.value.coverUrl = b64;
+    try { await axios.put(`${URL_API}/users/me`, { coverUrl: b64 }); } catch(err){}
+  };
+  reader.readAsDataURL(file);
+};
+
+// ==========================================
+// CAPA DO RELACIONAMENTO 
+// ==========================================
+const onRelCoverSelected = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const b64 = ev.target.result;
+    usuarioLogado.value.relationship.coverImageUrl = b64;
+    try { await axios.put(`${URL_API}/relationship`, { coverImageUrl: b64 }); } catch(err){}
+  };
+  reader.readAsDataURL(file);
+};
+
+// ==========================================
+// 📸 MEMÓRIAS (Cloudinary)
+// ==========================================
+const carregarMemories = async () => { try { const res = await axios.get(`${URL_API}/memories`); galeriaReal.value = res.data; } catch(e) {} };
+const triggerMemoryInput = () => { if (memoryInputRef.value) memoryInputRef.value.click(); };
 const onMemorySelected = (event) => {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = async (e) => {
     const base64Image = e.target.result;
-    const description = prompt("Escreva uma legenda rápida para esta memória:");
-    
-    // UI Otimista: A foto aparece na tela antes mesmo de terminar de enviar pra nuvem
+    const description = prompt("Legenda para esta memória:");
     galeriaReal.value.unshift({ id: 'temp', imageUrl: base64Image, description: description, author: { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }, createdAt: new Date().toISOString() });
-    
-    try {
-      await axios.post(`${URL_API}/memories`, { base64Image, description });
-      carregarMemories(); // Atualiza a lista com o link real do Cloudinary
-    } catch(err) { alert("Erro ao subir a foto para a nuvem."); }
+    try { await axios.post(`${URL_API}/memories`, { base64Image, description }); carregarMemories(); } catch(err) { alert("Erro ao subir a foto"); }
   };
   reader.readAsDataURL(file);
 };
 
 // ==========================================
-// 🚀 DEMAIS LÓGICAS
+// 🚀 DEMAIS LÓGICAS (Postagem no Feed com Imagem, Auth, Modal Saudade)
 // ==========================================
-const enviarSaudade = async () => {
-  const customMessage = prompt("Escreva um recado rápido para enviar ao e-mail dela:");
-  if (!customMessage) return;
-  try { await axios.post(`${URL_API}/notifications/miss-you`, { customMessage }); alert("Recado enviado direto para o e-mail dela! ❤️"); } catch(e) {}
+const abrirModalSaudade = () => { modalSaudadeAberto.value = true; textoSaudade.value = ''; };
+const dispararSaudade = async () => {
+  if (!textoSaudade.value.trim()) return;
+  try { 
+    await axios.post(`${URL_API}/notifications/miss-you`, { customMessage: textoSaudade.value }); 
+    modalSaudadeAberto.value = false;
+    alert("Mensagem enviada com sucesso! ❤️"); 
+  } catch(e) {}
 };
 
-const adicionarMeta = async () => {
-  const titulo = prompt("Qual a nova meta de vocês?");
-  if (!titulo) return;
-  try { const res = await axios.post(`${URL_API}/goals`, { title: titulo }); metasCasal.value.push(res.data); } catch(e) {}
-};
-
-const toggleEditDatas = async () => {
-  if (editandoDatas.value) { try { await axios.put(`${URL_API}/relationship`, { startDate: formDatas.startDate, firstKiss: formDatas.firstKiss }); } catch(e) {} }
-  editandoDatas.value = !editandoDatas.value;
-};
-
-const fileInputRef = ref(null);
-const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
-const onFileSelected = (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+const onPostImageSelected = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
   const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64Image = e.target.result;
-    usuarioLogado.value.avatarUrl = base64Image;
-    try { await axios.put(`${URL_API}/users/me`, { avatarUrl: base64Image }); } catch(e) {}
-  };
+  reader.onload = (ev) => { imagemPostBase64.value = ev.target.result; };
   reader.readAsDataURL(file);
 };
+const enviarPost = async () => { 
+  if ((!novoTexto.value.trim() && !imagemPostBase64.value) || !canalAtivo.value) return; 
+  try { 
+    await axios.post(`${URL_API}/posts`, { content: novoTexto.value, imageUrl: imagemPostBase64.value, channelId: canalAtivo.value.id, unlockAt: modoCapsula.value && dataCapsula.value ? dataCapsula.value : null }); 
+    novoTexto.value = ''; imagemPostBase64.value = ''; postInputRef.value.value = null; modoCapsula.value = false; dataCapsula.value = ''; carregarFeed(); 
+  } catch (err) {} 
+};
 
+// Autenticação
 const fazerLogin = async () => {
   try {
     const res = await axios.post(`${URL_API}/auth/login`, { email: email.value, password: senha.value });
-    localStorage.setItem('verona_token', res.data.token);
-    configurarAxiosToken(res.data.token);
+    localStorage.setItem('verona_token', res.data.token); configurarAxiosToken(res.data.token);
     usuarioLogado.value = { ...res.data.user, relationship: res.data.relationship };
+    parceiro.value = res.data.partner;
     senha.value = '';
   } catch (err) { alert(err.response?.data?.error || 'Erro no login'); }
 };
 
 const fazerCadastro = async () => {
   try {
-    await axios.post(`${URL_API}/auth/register`, { name: nome.value, email: email.value, username: username.value, password: senha.value, inviteCode: codigoConvite.value, licenseKey: licenseKey.value });
-    alert('Santuário criado com sucesso! Faça login.');
-    modoAuth.value = 'login'; senha.value = '';
+    await axios.post(`${URL_API}/auth/register`, { name: nome.value, email: email.value, username: username.value, password: senha.value, inviteCode: codigoConvite.value, licenseKey: licenseKey.value, coupleName: coupleName.value });
+    alert('Santuário criado com sucesso! Faça login.'); modoAuth.value = 'login'; senha.value = '';
   } catch (err) { alert(err.response?.data?.error || 'Erro no cadastro'); }
 };
 
-const fazerLogout = () => { usuarioLogado.value = null; localStorage.removeItem('verona_token'); delete axios.defaults.headers.common['Authorization']; if (socket) { socket.disconnect(); socket = null; } };
+const fazerLogout = () => { usuarioLogado.value = null; parceiro.value = null; localStorage.removeItem('verona_token'); delete axios.defaults.headers.common['Authorization']; if (socket) { socket.disconnect(); socket = null; } };
 const copiarCodigo = () => { navigator.clipboard.writeText(usuarioLogado.value.relationship.inviteCode); alert('Código copiado!'); };
 
-const carregarHistoricoChat = async () => { try { const res = await axios.get(`${URL_API}/chat`); mensagensChat.value = res.data; } catch(e) {} };
+// Canais e Metas
 const carregarCanais = async () => { try { const res = await axios.get(`${URL_API}/channels`); canais.value = res.data; if (res.data.length > 0) canalAtivo.value = res.data.find(c => c.name === 'geral') || res.data[0]; } catch (err) {} };
 const criarCanal = async () => { if (!novoCanalNome.value.trim()) return; try { await axios.post(`${URL_API}/channels`, { name: novoCanalNome.value }); novoCanalNome.value = ''; modoCriarCanal.value = false; carregarCanais(); } catch (err) {} };
-
 const carregarFeed = async () => { if (!canalAtivo.value) return; try { const res = await axios.get(`${URL_API}/channels/${canalAtivo.value.id}/posts`); feed.value = res.data.map(post => ({ ...post, curtido: false, mostrarRespostas: false, novaResposta: '' })); } catch (err) {} };
-const enviarPost = async () => { if (!novoTexto.value.trim() || !canalAtivo.value) return; try { await axios.post(`${URL_API}/posts`, { content: novoTexto.value, channelId: canalAtivo.value.id, unlockAt: modoCapsula.value && dataCapsula.value ? dataCapsula.value : null }); novoTexto.value = ''; modoCapsula.value = false; dataCapsula.value = ''; carregarFeed(); } catch (err) {} };
 
+const adicionarMeta = async () => { const titulo = prompt("Qual a nova meta de vocês?"); if (!titulo) return; try { const res = await axios.post(`${URL_API}/goals`, { title: titulo }); metasCasal.value.push(res.data); } catch(e) {} };
+const toggleEditDatas = async () => { if (editandoDatas.value) { try { await axios.put(`${URL_API}/relationship`, { startDate: formDatas.startDate, firstKiss: formDatas.firstKiss }); } catch(e) {} } editandoDatas.value = !editandoDatas.value; };
+
+const fileInputRef = ref(null);
+const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
+const onFileSelected = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { const base64Image = e.target.result; usuarioLogado.value.avatarUrl = base64Image; try { await axios.put(`${URL_API}/users/me`, { avatarUrl: base64Image }); } catch(e) {} }; reader.readAsDataURL(file); };
+
+// Respostas e Chat
 const toggleRespostas = (post) => { post.mostrarRespostas = !post.mostrarRespostas; };
-const enviarResposta = async (post) => {
-  if (!post.novaResposta?.trim()) return;
-  try {
-    const res = await axios.post(`${URL_API}/posts`, { content: post.novaResposta, parentId: post.id, channelId: canalAtivo.value.id });
-    if (!post.replies) post.replies = [];
-    res.data.author = { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }; 
-    post.replies.push(res.data);
-    post.novaResposta = '';
-  } catch(e) {}
-};
+const enviarResposta = async (post) => { if (!post.novaResposta?.trim()) return; try { const res = await axios.post(`${URL_API}/posts`, { content: post.novaResposta, parentId: post.id, channelId: canalAtivo.value.id }); if (!post.replies) post.replies = []; res.data.author = { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }; post.replies.push(res.data); post.novaResposta = ''; } catch(e) {} };
 
+const carregarHistoricoChat = async () => { try { const res = await axios.get(`${URL_API}/chat`); mensagensChat.value = res.data; } catch(e) {} };
 const enviarMensagemChat = () => { if (!novaMensagemChat.value.trim()) return; socket.emit('nova_mensagem', { texto: novaMensagemChat.value, authorName: usuarioLogado.value.name, authorId: usuarioLogado.value.id, authorAvatarUrl: usuarioLogado.value.avatarUrl, relationshipId: usuarioLogado.value.relationship.id }); novaMensagemChat.value = ''; };
 
+// Gamificação
 const carregarDailyQuestion = async () => { try { const res = await axios.get(`${URL_API}/daily-question`); dailyQuestion.value = res.data; } catch(e) {} };
 const responderDaily = async () => { if (!minhaRespostaDaily.value.trim()) return; try { await axios.post(`${URL_API}/daily-question/answer`, { questionId: dailyQuestion.value.id, content: minhaRespostaDaily.value }); minhaRespostaDaily.value = ''; await carregarDailyQuestion(); if (dailyQuestion.value.partnerAnswered) { usuarioLogado.value.relationship.streakCount += 1; } } catch(e) {} };
 const girarRoleta = async () => { try { ideaSorteada.value = { title: "Sorteando..." }; const res = await axios.get(`${URL_API}/date-ideas/random`); setTimeout(() => { ideaSorteada.value = res.data; }, 800); } catch(e) {} };
 const atualizarHumor = async (moodId) => { try { await axios.put(`${URL_API}/users/me`, { moodStatus: moodId }); usuarioLogado.value.moodStatus = moodId; } catch(e) {} };
 
-const tocarMusicaDoCasal = () => { alert("Iniciando playlist..."); };
 const obterIconeHumor = (moodId) => { const found = moodOptions.find(m => m.id === moodId); return found ? found.icon : '✨'; };
+const obterLabelHumor = (moodId) => { const found = moodOptions.find(m => m.id === moodId); return found ? found.label : ''; };
 const estaTrancado = (unlockAt) => { if (!unlockAt) return false; return new Date(unlockAt) > new Date(); };
 const formatarDataHora = (dataIso) => { if (!dataIso) return ''; const data = new Date(dataIso); return `${data.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}, ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}`; };
 const formatarData = (dataIso) => { if (!dataIso) return ''; return new Date(dataIso + 'T12:00:00Z').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }); };
+const formatarHora = (ts) => ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' }) : '';
 const getInicial = (nomeStr) => nomeStr ? nomeStr.charAt(0).toUpperCase() : 'V';
 
 onUnmounted(() => { if (socket) socket.disconnect(); });
 </script>
 
 <style>
-/* ========================================== */
-/* CSS FLUIDO (WIDGET E MOBILE) */
-/* ========================================== */
+/* CSS FLUIDO */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
