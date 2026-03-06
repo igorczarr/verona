@@ -253,27 +253,30 @@
                <div style="margin-bottom: 40px;">
                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
                    <h3 class="playfair" style="font-size: 24px; margin: 0;">Nossos Momentos</h3>
-                   <button style="background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;">+ Adicionar</button>
+                   
+                   <input type="file" ref="memoryInputRef" style="display: none" accept="image/*" @change="onMemorySelected" />
+                   <button @click="triggerMemoryInput" style="background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;">+ Adicionar</button>
                  </div>
                  
                  <div class="horizontal-gallery hide-scrollbar">
-                    <div v-for="foto in mockGaleria" :key="foto.id" class="gallery-card-vertical">
-                       <img :src="foto.img" />
+                    <div v-for="foto in galeriaReal" :key="foto.id" class="gallery-card-vertical">
+                       <img :src="foto.imageUrl" />
                        <div class="gallery-card-overlay">
-                          <div style="font-size: 13px; line-height: 1.4; margin-bottom: 10px; font-weight: 500;">{{ foto.desc }}</div>
+                          <div style="font-size: 13px; line-height: 1.4; margin-bottom: 10px; font-weight: 500;">{{ foto.description }}</div>
                           <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; opacity: 0.8;">
                              <div style="display: flex; align-items: center; gap: 6px;">
                                <div class="avatar-img" style="width: 20px; height: 20px; font-size: 9px; overflow: hidden; border: 1px solid rgba(255,255,255,0.5);">
-                                 <img v-if="foto.authorAvatar" :src="foto.authorAvatar" style="width:100%; height:100%; object-fit:cover;"/>
-                                 <template v-else>{{ getInicial(foto.author) }}</template>
+                                 <img v-if="foto.author?.avatarUrl" :src="foto.author.avatarUrl" style="width:100%; height:100%; object-fit:cover;"/>
+                                 <template v-else>{{ getInicial(foto.author?.name) }}</template>
                                </div>
-                               {{ foto.author }}
+                               {{ foto.author?.name }}
                              </div>
-                             <span>{{ foto.date }}</span>
+                             <span>{{ formatarData(foto.createdAt) || 'Agora' }}</span>
                           </div>
                        </div>
                     </div>
-                    <div class="gallery-card-vertical empty-add" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border-glass); background: var(--bg-app); cursor: pointer;">
+                    
+                    <div @click="triggerMemoryInput" class="gallery-card-vertical empty-add" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border-glass); background: var(--bg-app); cursor: pointer;">
                       <Plus :size="30" color="var(--text-muted)" style="margin-bottom: 10px;" />
                       <span style="color: var(--text-muted); font-weight: bold;">Nova Memória</span>
                     </div>
@@ -411,8 +414,8 @@ import {
   ImageIcon, Send, LogOut, Hash, Menu, ChevronLeft, ChevronRight, Plus, Camera, Lock, Unlock, Clock, Gift, Flame
 } from 'lucide-vue-next'; 
 
-// LIGAÇÃO COM O MOTOR RENDER
-const URL_API = 'http://localhost:3000'; // Substitua pela sua URL OnRender quando fizer o deploy
+// LIGAÇÃO COM O MOTOR (Substitua pela sua URL final quando for subir a API)
+const URL_API = 'https://verona-api.onrender.com';
 let socket = null;
 
 const usuarioLogado = ref(null);
@@ -424,7 +427,6 @@ const senha = ref('');
 const codigoConvite = ref('');
 const licenseKey = ref('');
 
-// CONTROLES DE INTERFACE NOVIDADE (MOBILE E CHAT)
 const sidebarCollapsed = ref(false);
 const isMobileMenuOpen = ref(false);
 const isChatOpen = ref(false);
@@ -458,27 +460,17 @@ const editandoDatas = ref(false);
 const formDatas = reactive({ startDate: '', firstKiss: '' });
 const metasCasal = ref([]); 
 
-// FOTOS VERTICAIS (MOCK) 9:16
-const mockGaleria = ref([
-  { id: 1, img: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=600&h=1066&fit=crop', desc: 'Aquele café da manhã perfeito.', author: 'Igor', authorAvatar: null, date: 'Hoje' },
-  { id: 2, img: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&h=1066&fit=crop', desc: 'O vento frio e a gente.', author: 'Julieta', authorAvatar: null, date: 'Ontem' }
-]);
+// A GALERIA AGORA É REAL E VEM DO CLOUDINARY
+const galeriaReal = ref([]); 
+const memoryInputRef = ref(null);
 
 const configurarAxiosToken = (token) => { axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; };
 
-// NAVEGAÇÃO SEGURA (Fecha o menu no mobile ao clicar)
-const mudarAba = (aba) => {
-  abaAtiva.value = aba;
-  isMobileMenuOpen.value = false;
-};
-const mudarCanal = (canal) => { 
-  canalAtivo.value = canal; 
-  abaAtiva.value = 'feed'; 
-  isMobileMenuOpen.value = false;
-};
+const mudarAba = (aba) => { abaAtiva.value = aba; isMobileMenuOpen.value = false; };
+const mudarCanal = (canal) => { canalAtivo.value = canal; abaAtiva.value = 'feed'; isMobileMenuOpen.value = false; };
 
 // ==========================================
-// 🛡️ PERSISTÊNCIA (F5)
+// 🛡️ PERSISTÊNCIA E CARREGAMENTO
 // ==========================================
 onMounted(async () => {
   const tokenSalvo = localStorage.getItem('verona_token');
@@ -496,6 +488,7 @@ watch(() => usuarioLogado.value, (user) => {
     carregarCanais();
     carregarDailyQuestion();
     carregarHistoricoChat(); 
+    carregarMemories(); // Busca as fotos reais na nuvem!
     
     formDatas.startDate = user.relationship.startDate ? user.relationship.startDate.split('T')[0] : '';
     formDatas.firstKiss = user.relationship.firstKiss ? user.relationship.firstKiss.split('T')[0] : '';
@@ -512,34 +505,56 @@ watch(() => usuarioLogado.value, (user) => {
 watch(() => canalAtivo.value, (canal) => { if (canal) carregarFeed(); });
 
 // ==========================================
-// 🚀 LÓGICAS NUCLEARES
+// 📸 MOTOR CLOUDINARY PARA O CARROSSEL (NOVO)
+// ==========================================
+const carregarMemories = async () => {
+  try {
+    const res = await axios.get(`${URL_API}/memories`);
+    galeriaReal.value = res.data;
+  } catch(e) { console.error(e); }
+};
+
+const triggerMemoryInput = () => { if (memoryInputRef.value) memoryInputRef.value.click(); };
+
+const onMemorySelected = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64Image = e.target.result;
+    const description = prompt("Escreva uma legenda rápida para esta memória:");
+    
+    // UI Otimista: A foto aparece na tela antes mesmo de terminar de enviar pra nuvem
+    galeriaReal.value.unshift({ id: 'temp', imageUrl: base64Image, description: description, author: { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }, createdAt: new Date().toISOString() });
+    
+    try {
+      await axios.post(`${URL_API}/memories`, { base64Image, description });
+      carregarMemories(); // Atualiza a lista com o link real do Cloudinary
+    } catch(err) { alert("Erro ao subir a foto para a nuvem."); }
+  };
+  reader.readAsDataURL(file);
+};
+
+// ==========================================
+// 🚀 DEMAIS LÓGICAS
 // ==========================================
 const enviarSaudade = async () => {
   const customMessage = prompt("Escreva um recado rápido para enviar ao e-mail dela:");
   if (!customMessage) return;
-  try {
-    await axios.post(`${URL_API}/notifications/miss-you`, { customMessage });
-    alert("Recado enviado direto para o e-mail dela! ❤️");
-  } catch(e) { console.error("Erro ao enviar notificação"); }
+  try { await axios.post(`${URL_API}/notifications/miss-you`, { customMessage }); alert("Recado enviado direto para o e-mail dela! ❤️"); } catch(e) {}
 };
 
 const adicionarMeta = async () => {
   const titulo = prompt("Qual a nova meta de vocês?");
   if (!titulo) return;
-  try {
-    const res = await axios.post(`${URL_API}/goals`, { title: titulo });
-    metasCasal.value.push(res.data);
-  } catch(e) { console.error('Erro ao adicionar meta'); }
+  try { const res = await axios.post(`${URL_API}/goals`, { title: titulo }); metasCasal.value.push(res.data); } catch(e) {}
 };
 
 const toggleEditDatas = async () => {
-  if (editandoDatas.value) { 
-    try { await axios.put(`${URL_API}/relationship`, { startDate: formDatas.startDate, firstKiss: formDatas.firstKiss }); } catch(e) {} 
-  }
+  if (editandoDatas.value) { try { await axios.put(`${URL_API}/relationship`, { startDate: formDatas.startDate, firstKiss: formDatas.firstKiss }); } catch(e) {} }
   editandoDatas.value = !editandoDatas.value;
 };
 
-// MOTOR DE AVATAR BASE64
 const fileInputRef = ref(null);
 const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
 const onFileSelected = (event) => {
@@ -582,17 +597,16 @@ const criarCanal = async () => { if (!novoCanalNome.value.trim()) return; try { 
 const carregarFeed = async () => { if (!canalAtivo.value) return; try { const res = await axios.get(`${URL_API}/channels/${canalAtivo.value.id}/posts`); feed.value = res.data.map(post => ({ ...post, curtido: false, mostrarRespostas: false, novaResposta: '' })); } catch (err) {} };
 const enviarPost = async () => { if (!novoTexto.value.trim() || !canalAtivo.value) return; try { await axios.post(`${URL_API}/posts`, { content: novoTexto.value, channelId: canalAtivo.value.id, unlockAt: modoCapsula.value && dataCapsula.value ? dataCapsula.value : null }); novoTexto.value = ''; modoCapsula.value = false; dataCapsula.value = ''; carregarFeed(); } catch (err) {} };
 
-// RESPOSTAS E FIOS
 const toggleRespostas = (post) => { post.mostrarRespostas = !post.mostrarRespostas; };
 const enviarResposta = async (post) => {
   if (!post.novaResposta?.trim()) return;
   try {
     const res = await axios.post(`${URL_API}/posts`, { content: post.novaResposta, parentId: post.id, channelId: canalAtivo.value.id });
     if (!post.replies) post.replies = [];
-    res.data.author = { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }; // Mock instantaneo UI
+    res.data.author = { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }; 
     post.replies.push(res.data);
     post.novaResposta = '';
-  } catch(e) { console.error(e); }
+  } catch(e) {}
 };
 
 const enviarMensagemChat = () => { if (!novaMensagemChat.value.trim()) return; socket.emit('nova_mensagem', { texto: novaMensagemChat.value, authorName: usuarioLogado.value.name, authorId: usuarioLogado.value.id, authorAvatarUrl: usuarioLogado.value.avatarUrl, relationshipId: usuarioLogado.value.relationship.id }); novaMensagemChat.value = ''; };
@@ -614,32 +628,28 @@ onUnmounted(() => { if (socket) socket.disconnect(); });
 
 <style>
 /* ========================================== */
-/* O NOVO CSS (RESPONSIVIDADE E NOVOS MÓDULOS)*/
+/* CSS FLUIDO (WIDGET E MOBILE) */
 /* ========================================== */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* WIDGET DE CHAT FLUTUANTE */
 .chat-widget-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; }
-.chat-trigger-btn { width: 65px; height: 65px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-color), #E11D48); color: white; border: none; box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.chat-trigger-btn { width: 65px; height: 65px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-color), #E11D48); color: white; border: none; box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
 .chat-trigger-btn:hover { transform: scale(1.1); }
 .chat-window { width: 380px; height: 500px; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease-out; }
 .chat-window-header { background: var(--accent-color); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
 .chat-window-input { padding: 15px; border-top: 1px solid var(--border-glass); display: flex; gap: 10px; background: var(--bg-app); }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-/* POSTS MODERNOS (CANAIS) */
 .post-modern-card { background: var(--bg-surface); padding: 25px; border-radius: 24px; border: 1px solid var(--border-glass); box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; }
 .post-modern-card:hover { border-color: rgba(225, 29, 72, 0.3); }
 
-/* GALERIA HORIZONTAL 9:16 */
 .horizontal-gallery { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; }
 .gallery-card-vertical { flex: 0 0 240px; aspect-ratio: 9/16; position: relative; scroll-snap-align: center; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1); transition: transform 0.3s; }
 .gallery-card-vertical img { width: 100%; height: 100%; object-fit: cover; }
 .gallery-card-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; color: white; }
 .empty-add:hover { background: rgba(225,29,72,0.05) !important; border-color: var(--accent-color) !important; }
 
-/* RESPONSIVIDADE MOBILE ABSOLUTA */
 .mobile-header { display: none; background: var(--bg-surface); padding: 15px 20px; border-bottom: 1px solid var(--border-glass); justify-content: space-between; align-items: center; }
 .mobile-menu-btn { background: none; border: none; color: var(--text-main); cursor: pointer; }
 
@@ -654,7 +664,6 @@ onUnmounted(() => { if (socket) socket.disconnect(); });
   .dates-grid { grid-template-columns: 1fr !important; }
   .daily-answers-grid { grid-template-columns: 1fr !important; }
   
-  /* Ajuste Chat no Mobile */
   .chat-window { width: 100%; height: calc(100vh - 100px); position: fixed; bottom: 0; left: 0; border-radius: 24px 24px 0 0; z-index: 10000; }
   .chat-trigger-btn { bottom: 20px; right: 20px; z-index: 10001; }
 }

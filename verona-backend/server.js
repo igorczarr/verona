@@ -1,5 +1,5 @@
 // ==========================================
-// VERONA OS - BACKEND SÊNIOR (Sprint 1 - Foundation & SaaS Ready)
+// VERONA OS - BACKEND SÊNIOR (Sprint 2 - Cloudinary & Memories Engine)
 // ==========================================
 const express = require('express');
 const http = require('http');
@@ -9,11 +9,14 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const cloudinary = require('cloudinary').v2; // NOVO: Motor de Nuvem para Imagens
 
 const app = express();
 const prisma = new PrismaClient();
 app.use(cors()); 
-app.use(express.json({ limit: '10mb' })); 
+
+// Limite aumentado para 50mb para suportar o peso de fotos tiradas de iPhones/Androids recentes
+app.use(express.json({ limit: '50mb' })); 
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
@@ -21,7 +24,30 @@ const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } 
 const JWT_SECRET = process.env.JWT_SECRET || 'verona_super_secret_key_2026';
 const MASTER_KEY = process.env.MASTER_KEY || 'VERONA2026'; // A Senha Mestra de Segurança
 
+// ==========================================
+// ☁️ CONFIGURAÇÃO DO CLOUDINARY (CDN DE IMAGENS)
+// ==========================================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Função Sênior de conversão: Pega o Base64, joga na nuvem e devolve só o link super leve
+const uploadImage = async (base64Image) => {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) return base64Image; // Fallback seguro caso esqueça a chave
+  try {
+    const result = await cloudinary.uploader.upload(base64Image, { folder: "verona_santuario" });
+    return result.secure_url;
+  } catch (error) {
+    console.error("Erro no Cloudinary:", error);
+    return base64Image;
+  }
+};
+
+// ==========================================
 // 📧 CONFIGURAÇÃO DO DISPARADOR DE E-MAILS
+// ==========================================
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
@@ -46,15 +72,13 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ==========================================
-// 🎟️ GERADOR ADMIN DE LICENÇAS (Uso Temporário do CEO)
+// 🎟️ GERADOR ADMIN DE LICENÇAS (SaaS)
 // ==========================================
-// Rota secreta para você criar uma chave antes de ligar a Kiwify
 app.post('/admin/generate-license', async (req, res) => {
   try {
     const { masterKey } = req.body;
     if (masterKey !== MASTER_KEY) return res.status(403).json({ error: 'Acesso negado. Apenas o CEO.' });
 
-    // Gera chave no padrão VRN-XXXX-XXXX
     const randomCode = () => Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `VRN-${randomCode()}-${randomCode()}`;
     
@@ -64,11 +88,10 @@ app.post('/admin/generate-license', async (req, res) => {
 });
 
 // ==========================================
-// 🚪 ROTAS DE AUTENTICAÇÃO E PERSISTÊNCIA (C/ METAS)
+// 🚪 ROTAS DE AUTENTICAÇÃO E PERSISTÊNCIA 
 // ==========================================
 app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
-    // Agora busca o cofre COMPLETO (com as Metas) para resistir ao F5
     const user = await prisma.user.findUnique({ 
       where: { id: req.user.userId }, 
       include: { relationship: { include: { goals: true } } } 
@@ -86,7 +109,6 @@ app.post('/auth/register', async (req, res) => {
     let relationshipId; 
     let novoStatus = 'PENDING';
 
-    // CENÁRIO A: É o PARCEIRO entrando com o convite (Gratuito)
     if (inviteCode) {
       const rel = await prisma.relationship.findUnique({ where: { inviteCode } });
       if (!rel) return res.status(404).json({ error: 'Código de convite inválido.' });
@@ -97,9 +119,7 @@ app.post('/auth/register', async (req, res) => {
       const parceiro = await prisma.user.findFirst({ where: { relationshipId, NOT: { email } }});
       if (parceiro) enviarEmail(parceiro.email, "Santuário Completo ❤️", `${name} entrou no Verona!`);
 
-    } 
-    // CENÁRIO B: É o COMPRADOR criando um cofre novo (EXIGE LICENÇA)
-    else {
+    } else {
       if (!licenseKey) return res.status(403).json({ error: 'Licença de acesso obrigatória para criar um cofre.' });
       
       const licencaValida = await prisma.license.findUnique({ where: { key: licenseKey } });
@@ -131,15 +151,21 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // ==========================================
-// ⚙️ ROTAS DE PERFIL
+// ⚙️ ROTAS DE PERFIL (C/ UPLOAD DE IMAGEM)
 // ==========================================
 app.put('/users/me', authenticateToken, async (req, res) => {
   try {
-    const { moodStatus, avatarUrl, bio } = req.body;
+    const { moodStatus, avatarUrl, coverUrl, bio } = req.body;
     const dataToUpdate = {};
     if (moodStatus !== undefined) dataToUpdate.moodStatus = moodStatus;
-    if (avatarUrl !== undefined) dataToUpdate.avatarUrl = avatarUrl;
     if (bio !== undefined) dataToUpdate.bio = bio;
+
+    // Se o frontend mandou um Base64, nós enviamos pra nuvem e guardamos o link curto!
+    if (avatarUrl && avatarUrl.startsWith('data:image')) {
+      dataToUpdate.avatarUrl = await uploadImage(avatarUrl);
+    } else if (avatarUrl) {
+      dataToUpdate.avatarUrl = avatarUrl;
+    }
 
     const updatedUser = await prisma.user.update({ where: { id: req.user.userId }, data: dataToUpdate });
     res.json(updatedUser);
@@ -147,7 +173,41 @@ app.put('/users/me', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 📺 ROTAS DE CANAIS E POSTS 
+// 📸 GALERIA DE MEMÓRIAS (Carrossel 9:16)
+// ==========================================
+app.get('/memories', authenticateToken, async (req, res) => {
+  try {
+    const memories = await prisma.memory.findMany({
+      where: { relationshipId: req.user.relationshipId },
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { name: true, avatarUrl: true } } }
+    });
+    res.json(memories);
+  } catch (error) { res.status(500).json({ error: 'Erro ao buscar memórias.' }); }
+});
+
+app.post('/memories', authenticateToken, async (req, res) => {
+  try {
+    const { base64Image, description } = req.body;
+    if (!base64Image) return res.status(400).json({ error: 'Imagem é obrigatória para a memória.' });
+
+    // Converte o Base64 pesado em um link seguro e rápido
+    const imageUrl = await uploadImage(base64Image);
+    
+    const novaMemoria = await prisma.memory.create({
+      data: { imageUrl, description, authorId: req.user.userId, relationshipId: req.user.relationshipId },
+      include: { author: { select: { name: true, avatarUrl: true } } }
+    });
+
+    const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
+    if (parceiro) enviarEmail(parceiro.email, `Novo Momento Guardado 📸`, `${req.user.name} acabou de colocar uma nova memória no carrossel de vocês. Corra para ver.`);
+
+    res.status(201).json(novaMemoria);
+  } catch (error) { res.status(500).json({ error: 'Erro ao criar memória.' }); }
+});
+
+// ==========================================
+// 📺 ROTAS DE CANAIS E POSTS (C/ UPLOAD DE IMAGEM)
 // ==========================================
 app.get('/channels', authenticateToken, async (req, res) => {
   try { const channels = await prisma.channel.findMany({ where: { relationshipId: req.user.relationshipId }, orderBy: { createdAt: 'asc' } }); res.json(channels); } catch (error) { res.status(500).json({ error: 'Erro interno.' }); }
@@ -159,7 +219,7 @@ app.post('/channels', authenticateToken, async (req, res) => {
     const newChannel = await prisma.channel.create({ data: { name: formattedName, description: req.body.description, relationshipId: req.user.relationshipId } });
     
     const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
-    if (parceiro) enviarEmail(parceiro.email, `Novo canal criado: #${formattedName}`, `${req.user.name} criou um novo canal para vocês.`);
+    if (parceiro) enviarEmail(parceiro.email, `Nova conversa: #${formattedName}`, `${req.user.name} criou um novo canal de conversa.`);
     res.status(201).json(newChannel);
   } catch (error) { res.status(500).json({ error: 'Erro ao criar.' }); }
 });
@@ -179,13 +239,19 @@ app.get('/channels/:channelId/posts', authenticateToken, async (req, res) => {
 app.post('/posts', authenticateToken, async (req, res) => {
   try {
     const { content, imageUrl, parentId, channelId, unlockAt } = req.body;
+    let urlFinal = imageUrl;
+    
+    if (imageUrl && imageUrl.startsWith('data:image')) {
+      urlFinal = await uploadImage(imageUrl);
+    }
+
     const novoPost = await prisma.post.create({
-      data: { content, imageUrl, parentId, channelId, unlockAt: unlockAt ? new Date(unlockAt) : null, authorId: req.user.userId, relationshipId: req.user.relationshipId },
-      include: { author: { select: { name: true, username: true } } }
+      data: { content, imageUrl: urlFinal, parentId, channelId, unlockAt: unlockAt ? new Date(unlockAt) : null, authorId: req.user.userId, relationshipId: req.user.relationshipId },
+      include: { author: { select: { name: true, username: true, avatarUrl: true } } }
     });
     
     const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
-    if (parceiro && !parentId) enviarEmail(parceiro.email, `Nova memória de ${req.user.name}`, `Corra no Verona para ver a nova postagem.`);
+    if (parceiro && !parentId) enviarEmail(parceiro.email, `Nova postagem de ${req.user.name}`, `Corra no Verona para ver a nova mensagem no canal.`);
     res.status(201).json(novoPost);
   } catch (error) { res.status(500).json({ error: 'Erro ao postar.' }); }
 });
@@ -210,7 +276,6 @@ app.post('/notifications/miss-you', authenticateToken, async (req, res) => {
 app.put('/relationship', authenticateToken, async (req, res) => {
   try {
     const { startDate, firstKiss } = req.body;
-    // Evita apagar a data se o campo for enviado vazio
     const dataToUpdate = {};
     if (startDate) dataToUpdate.startDate = new Date(startDate);
     if (firstKiss) dataToUpdate.firstKiss = new Date(firstKiss);
@@ -225,6 +290,13 @@ app.post('/goals', authenticateToken, async (req, res) => {
     const goal = await prisma.goal.create({ data: { title: req.body.title, relationshipId: req.user.relationshipId } });
     res.json(goal);
   } catch (error) { res.status(500).json({ error: 'Erro ao criar meta.' }); }
+});
+
+app.get('/goals', authenticateToken, async (req, res) => {
+  try {
+    const goals = await prisma.goal.findMany({ where: { relationshipId: req.user.relationshipId }});
+    res.json(goals);
+  } catch (error) { res.status(500).json({ error: 'Erro.' }); }
 });
 
 // ==========================================
@@ -328,4 +400,4 @@ app.post('/kiwify/webhook', async (req, res) => {
 */
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 1) rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 2) rodando na porta ${PORT}`));
