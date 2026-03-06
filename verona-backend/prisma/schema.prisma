@@ -13,16 +13,16 @@ model Relationship {
   inviteCode       String           @unique @default(uuid())
   status           String           @default("PENDING")
   
-  // Datas e Marcos (Agora Persistentes)
+  name             String?          @default("Nosso Mundo") // Nome do Casal
+  spotifyUri       String?          // Link da música do casal
+  
   startDate        DateTime? 
   firstDate        DateTime? 
   firstKiss        DateTime? 
   engagementDate   DateTime? 
   weddingDate      DateTime? 
-  
   coverImageUrl    String?   
 
-  // 🔥 Gamificação
   streakCount      Int              @default(0)
   lastAnswerDate   DateTime?
 
@@ -32,8 +32,8 @@ model Relationship {
   messages         Message[] 
   dailyQuestions   DailyQuestion[]
   dateIdeas        DateIdea[]      
-  goals            Goal[]           // Conexão corrigida e validada
-  memories         Memory[]         // Nova tabela para o Feed de Fotos 9:16
+  goals            Goal[]           
+  memories         Memory[]         
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt

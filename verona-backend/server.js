@@ -1,5 +1,5 @@
 // ==========================================
-// VERONA OS - BACKEND SÊNIOR (Sprint 2 - Cloudinary & Memories Engine)
+// VERONA OS - BACKEND SÊNIOR (Sprint 3 - Identidade & Automação)
 // ==========================================
 const express = require('express');
 const http = require('http');
@@ -9,20 +9,18 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const cloudinary = require('cloudinary').v2; // NOVO: Motor de Nuvem para Imagens
+const cloudinary = require('cloudinary').v2;
 
 const app = express();
 const prisma = new PrismaClient();
 app.use(cors()); 
-
-// Limite aumentado para 50mb para suportar o peso de fotos tiradas de iPhones/Androids recentes
 app.use(express.json({ limit: '50mb' })); 
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'verona_super_secret_key_2026';
-const MASTER_KEY = process.env.MASTER_KEY || 'VERONA2026'; // A Senha Mestra de Segurança
+const MASTER_KEY = process.env.MASTER_KEY || 'VERONA2026'; 
 
 // ==========================================
 // ☁️ CONFIGURAÇÃO DO CLOUDINARY (CDN DE IMAGENS)
@@ -33,9 +31,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Função Sênior de conversão: Pega o Base64, joga na nuvem e devolve só o link super leve
 const uploadImage = async (base64Image) => {
-  if (!process.env.CLOUDINARY_CLOUD_NAME) return base64Image; // Fallback seguro caso esqueça a chave
+  if (!process.env.CLOUDINARY_CLOUD_NAME) return base64Image; 
   try {
     const result = await cloudinary.uploader.upload(base64Image, { folder: "verona_santuario" });
     return result.secure_url;
@@ -96,14 +93,19 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
       where: { id: req.user.userId }, 
       include: { relationship: { include: { goals: true } } } 
     });
+    // NOVO: Busca o parceiro para renderizar o Perfil Duplo no Frontend
+    const partner = await prisma.user.findFirst({ 
+      where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }
+    });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-    res.json({ user, relationship: user.relationship });
+    res.json({ user, relationship: user.relationship, partner });
   } catch (error) { res.status(500).json({ error: 'Erro ao restaurar sessão.' }); }
 });
 
 app.post('/auth/register', async (req, res) => {
   try {
-    const { name, email, username, password, inviteCode, licenseKey } = req.body;
+    // NOVO: Recebe o 'coupleName' para personalização
+    const { name, email, username, password, inviteCode, licenseKey, coupleName } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
     
     let relationshipId; 
@@ -125,7 +127,8 @@ app.post('/auth/register', async (req, res) => {
       const licencaValida = await prisma.license.findUnique({ where: { key: licenseKey } });
       if (!licencaValida || licencaValida.isUsed) return res.status(403).json({ error: 'Licença inválida ou já utilizada.' });
 
-      const novoRel = await prisma.relationship.create({ data: {} });
+      // Cria o cofre já com o nome do casal (ou o padrão)
+      const novoRel = await prisma.relationship.create({ data: { name: coupleName || "Nosso Mundo" } });
       relationshipId = novoRel.id;
       
       await prisma.channel.create({ data: { name: 'geral', description: 'O nosso dia a dia', relationshipId } });
@@ -146,12 +149,15 @@ app.post('/auth/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Credenciais inválidas.' });
 
     const token = jwt.sign({ userId: user.id, relationshipId: user.relationshipId, name: user.name }, JWT_SECRET, { expiresIn: '365d' });
-    res.json({ token, user, relationship: user.relationship });
+    
+    // NOVO: Envia o parceiro no login para o Perfil Duplo
+    const partner = await prisma.user.findFirst({ where: { relationshipId: user.relationshipId, id: { not: user.id } }});
+    res.json({ token, user, relationship: user.relationship, partner });
   } catch (error) { res.status(500).json({ error: 'Erro no login.' }); }
 });
 
 // ==========================================
-// ⚙️ ROTAS DE PERFIL (C/ UPLOAD DE IMAGEM)
+// ⚙️ ROTAS DE PERFIL (Dual Profile e Murais Individuais)
 // ==========================================
 app.put('/users/me', authenticateToken, async (req, res) => {
   try {
@@ -160,17 +166,39 @@ app.put('/users/me', authenticateToken, async (req, res) => {
     if (moodStatus !== undefined) dataToUpdate.moodStatus = moodStatus;
     if (bio !== undefined) dataToUpdate.bio = bio;
 
-    // Se o frontend mandou um Base64, nós enviamos pra nuvem e guardamos o link curto!
     if (avatarUrl && avatarUrl.startsWith('data:image')) {
       dataToUpdate.avatarUrl = await uploadImage(avatarUrl);
     } else if (avatarUrl) {
       dataToUpdate.avatarUrl = avatarUrl;
+    }
+    
+    // NOVO: Capa do perfil individual
+    if (coverUrl && coverUrl.startsWith('data:image')) {
+      dataToUpdate.coverUrl = await uploadImage(coverUrl);
     }
 
     const updatedUser = await prisma.user.update({ where: { id: req.user.userId }, data: dataToUpdate });
     res.json(updatedUser);
   } catch (error) { res.status(500).json({ error: 'Erro ao atualizar perfil.' }); }
 });
+
+// NOVO: Murais Privados do Perfil
+app.get('/profile-posts/:userId', authenticateToken, async (req, res) => {
+  try {
+    const posts = await prisma.profilePost.findMany({ where: { authorId: req.params.userId }, orderBy: { createdAt: 'desc' } });
+    res.json(posts);
+  } catch (error) { res.status(500).json({ error: 'Erro ao buscar mural.' }); }
+});
+
+app.post('/profile-posts', authenticateToken, async (req, res) => {
+  try {
+    let urlFinal = req.body.imageUrl;
+    if (urlFinal && urlFinal.startsWith('data:image')) urlFinal = await uploadImage(urlFinal);
+    const novoPost = await prisma.profilePost.create({ data: { content: req.body.content, imageUrl: urlFinal, authorId: req.user.userId } });
+    res.status(201).json(novoPost);
+  } catch (error) { res.status(500).json({ error: 'Erro no mural.' }); }
+});
+
 
 // ==========================================
 // 📸 GALERIA DE MEMÓRIAS (Carrossel 9:16)
@@ -191,7 +219,6 @@ app.post('/memories', authenticateToken, async (req, res) => {
     const { base64Image, description } = req.body;
     if (!base64Image) return res.status(400).json({ error: 'Imagem é obrigatória para a memória.' });
 
-    // Converte o Base64 pesado em um link seguro e rápido
     const imageUrl = await uploadImage(base64Image);
     
     const novaMemoria = await prisma.memory.create({
@@ -207,7 +234,7 @@ app.post('/memories', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 📺 ROTAS DE CANAIS E POSTS (C/ UPLOAD DE IMAGEM)
+// 📺 ROTAS DE CANAIS E POSTS 
 // ==========================================
 app.get('/channels', authenticateToken, async (req, res) => {
   try { const channels = await prisma.channel.findMany({ where: { relationshipId: req.user.relationshipId }, orderBy: { createdAt: 'asc' } }); res.json(channels); } catch (error) { res.status(500).json({ error: 'Erro interno.' }); }
@@ -271,14 +298,20 @@ app.post('/notifications/miss-you', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 💾 PERSISTÊNCIA DE METAS E DATAS
+// 💾 PERSISTÊNCIA DE METAS E DATAS (Atualizado com Spotify e Capa)
 // ==========================================
 app.put('/relationship', authenticateToken, async (req, res) => {
   try {
-    const { startDate, firstKiss } = req.body;
+    const { startDate, firstKiss, name, spotifyUri, coverImageUrl } = req.body;
     const dataToUpdate = {};
     if (startDate) dataToUpdate.startDate = new Date(startDate);
     if (firstKiss) dataToUpdate.firstKiss = new Date(firstKiss);
+    if (name) dataToUpdate.name = name;
+    if (spotifyUri !== undefined) dataToUpdate.spotifyUri = spotifyUri;
+    
+    if (coverImageUrl && coverImageUrl.startsWith('data:image')) {
+      dataToUpdate.coverImageUrl = await uploadImage(coverImageUrl);
+    }
 
     const updated = await prisma.relationship.update({ where: { id: req.user.relationshipId }, data: dataToUpdate });
     res.json(updated);
@@ -317,7 +350,7 @@ app.get('/chat', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 🧠 ROTAS DE GAMIFICAÇÃO (Pergunta do Dia & Roleta)
+// 🧠 ROTAS DE GAMIFICAÇÃO E AUTOMAÇÃO
 // ==========================================
 const generateMockAIQuestion = () => {
   const q = [
@@ -346,11 +379,24 @@ app.post('/daily-question/answer', authenticateToken, async (req, res) => {
   try {
     const { questionId, content } = req.body;
     await prisma.questionAnswer.create({ data: { content, questionId, userId: req.user.userId } });
-    const question = await prisma.dailyQuestion.findUnique({ where: { id: questionId }, include: { answers: true }});
+    const question = await prisma.dailyQuestion.findUnique({ where: { id: questionId }, include: { answers: true, relationship: { include: { users: true } } }});
     
     if (question.answers.length === 2) {
       const rel = await prisma.relationship.findUnique({ where: { id: req.user.relationshipId } });
       await prisma.relationship.update({ where: { id: req.user.relationshipId }, data: { streakCount: rel.streakCount + 1, lastAnswerDate: new Date() } });
+      
+      // NOVO: Automação - Cria post no canal #perguntasdodia
+      const sysChannel = await prisma.channel.findFirst({ where: { relationshipId: req.user.relationshipId, isSystem: true, name: 'perguntasdodia' } });
+      if (sysChannel) {
+         // Formata o texto bonito
+         const autor1 = question.relationship.users.find(u => u.id === question.answers[0].userId).name;
+         const autor2 = question.relationship.users.find(u => u.id === question.answers[1].userId).name;
+         const postContent = `🎯 **A Pergunta do Dia:** ${question.text}\n\n💬 **${autor1}:** ${question.answers[0].content}\n💬 **${autor2}:** ${question.answers[1].content}`;
+         
+         await prisma.post.create({
+           data: { content: postContent, channelId: sysChannel.id, authorId: req.user.userId, relationshipId: req.user.relationshipId }
+         });
+      }
     }
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: 'Erro.' }); }
@@ -387,17 +433,5 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
 });
 
-// ==========================================
-// 🌐 WEBHOOK DA KIWIFY (Aprovadas as compras - Sprint Futuro)
-// ==========================================
-/*
-app.post('/kiwify/webhook', async (req, res) => {
-  // 1. Validar Token da Kiwify
-  // 2. Se status == 'approved', gera a Licença VRN-XXXX
-  // 3. Envia e-mail de boas-vindas com a licença
-  res.status(200).send('OK');
-});
-*/
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 2) rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 3) rodando na porta ${PORT}`));
