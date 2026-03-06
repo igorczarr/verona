@@ -7,162 +7,226 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 👩‍❤️‍👨 O Cofre do Casal (Agora com Streak e Dinâmicas)
+// 👩‍❤️‍👨 O Cofre do Casal
 model Relationship {
-  id                String    @id @default(uuid())
-  inviteCode        String    @unique @default(uuid())
-  status            String    @default("PENDING")
+  id               String           @id @default(uuid())
+  inviteCode       String           @unique @default(uuid())
+  status           String           @default("PENDING")
   
-  // Datas e Marcos
-  startDate         DateTime? 
-  firstDate         DateTime? 
-  firstKiss         DateTime? 
-  engagementDate    DateTime? 
-  weddingDate       DateTime? 
+  // Datas e Marcos (Agora Persistentes)
+  startDate        DateTime? 
+  firstDate        DateTime? 
+  firstKiss        DateTime? 
+  engagementDate   DateTime? 
+  weddingDate      DateTime? 
   
-  coverImageUrl     String?   
+  coverImageUrl    String?   
 
-  // 🔥 Sistema de Streak e Gamificação
-  streakCount       Int       @default(0) // Quantos dias seguidos responderam
-  lastAnswerDate    DateTime? // Para calcular se o streak quebrou
+  // 🔥 Gamificação
+  streakCount      Int              @default(0)
+  lastAnswerDate   DateTime?
 
-  users             User[]    
-  channels          Channel[] 
-  posts             Post[]    
-  messages          Message[] 
-  dailyQuestions    DailyQuestion[] // Perguntas da IA exclusivas do casal
-  dateIdeas         DateIdea[]      // O baú da Roleta
+  users            User[]    
+  channels         Channel[] 
+  posts            Post[]    
+  messages         Message[] 
+  dailyQuestions   DailyQuestion[]
+  dateIdeas        DateIdea[]      
+  goals            Goal[]           // Conexão corrigida e validada
+  memories         Memory[]         // Nova tabela para o Feed de Fotos 9:16
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 }
 
-// 👤 Perfil do Usuário
+// 👤 Perfil do Usuário (Preparado para Sprint 2: Perfil Duplo)
 model User {
-  id               String        @id @default(uuid())
-  email            String        @unique 
-  username         String        @unique
+  id               String           @id @default(uuid())
+  email            String           @unique 
+  username         String           @unique
   passwordHash     String        
   name             String
+  
+  // Personalização Individual
   avatarUrl        String?
-  
-  // 🌡️ Termômetro Emocional (Ex: "exhausted", "romantic", "needy")
+  coverUrl         String?          // Capa do perfil individual
+  bio              String?          // Biografia curta
   moodStatus       String?       
-  
   phoneNumber      String?
 
   relationshipId   String?
-  relationship     Relationship? @relation(fields: [relationshipId], references: [id])
+  relationship     Relationship?    @relation(fields: [relationshipId], references: [id])
 
-  posts            Post[]
+  posts            Post[]           // Posts em canais
+  profilePosts     ProfilePost[]    // Posts no próprio mural
   messages         Message[]
   favorites        Favorite[]
-  answers          QuestionAnswer[] // Respostas às perguntas diárias
+  answers          QuestionAnswer[]
+  memories         Memory[]         // Autor das memórias da galeria
 
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 }
 
 // 📺 Canais
 model Channel {
-  id               String        @id @default(uuid())
+  id               String           @id @default(uuid())
   name             String        
   description      String?
+  isSystem         Boolean          @default(false) // Trava canais como #perguntasdodia
+  
   relationshipId   String
-  relationship     Relationship  @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
   posts            Post[]        
-  createdAt        DateTime      @default(now())
+  createdAt        DateTime         @default(now())
+
   @@unique([name, relationshipId])
 }
 
-// 📝 Posts da Timeline (Agora suportam Cápsula do Tempo)
+// 📝 Posts da Timeline (Canais)
 model Post {
-  id               String       @id @default(uuid())
+  id               String           @id @default(uuid())
   content          String
   imageUrl         String?
   
-  // 🔒 Cápsula do Tempo: Se existir, o post fica bloqueado/borrado até esta data
   unlockAt         DateTime?    
 
   authorId         String
-  author           User         @relation(fields: [authorId], references: [id])
+  author           User             @relation(fields: [authorId], references: [id])
+  
   relationshipId   String
-  relationship     Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
   channelId        String
-  channel          Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel          Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
   
   parentId         String?
-  parent           Post?        @relation("Thread", fields: [parentId], references: [id])
-  replies          Post[]       @relation("Thread")
+  parent           Post?            @relation("Thread", fields: [parentId], references: [id])
+  replies          Post[]           @relation("Thread")
 
   favorites        Favorite[]
-  createdAt        DateTime     @default(now())
+  createdAt        DateTime         @default(now())
 }
 
-// 💬 Chat Privado
-model Message {
-  id               String       @id @default(uuid())
+// 📌 Posts do Perfil Individual (Sprint 2)
+model ProfilePost {
+  id               String           @id @default(uuid())
   content          String
-  senderId         String
-  sender           User         @relation(fields: [senderId], references: [id])
-  relationshipId   String
-  relationship     Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
-  favorites        Favorite[]
-  createdAt        DateTime     @default(now())
+  imageUrl         String?
+  
+  authorId         String
+  author           User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  createdAt        DateTime         @default(now())
 }
 
-// ❓ A Pergunta do Dia (Gerada pela IA)
-model DailyQuestion {
-  id             String           @id @default(uuid())
-  text           String           // O texto da pergunta gerada
-  category       String           // "DEEP", "FUN", "SPICY"
-  date           DateTime         @default(now()) // O dia em que a pergunta é válida
+// 📸 Memórias (Feed 9:16 - Sprint 5)
+model Memory {
+  id               String           @id @default(uuid())
+  imageUrl         String
+  description      String?
   
-  relationshipId String
-  relationship   Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User             @relation(fields: [authorId], references: [id])
   
-  answers        QuestionAnswer[] // As respostas do Igor e da Julieta
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
 
-  @@unique([date, relationshipId]) // Apenas UMA pergunta por dia para o casal
+  createdAt        DateTime         @default(now())
+}
+
+// 💬 Chat Privado (Preparado para Histórico Eterno)
+model Message {
+  id               String           @id @default(uuid())
+  content          String
+  
+  senderId         String
+  sender           User             @relation(fields: [senderId], references: [id])
+  
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
+  favorites        Favorite[]
+  createdAt        DateTime         @default(now())
+}
+
+// ❓ A Pergunta do Dia
+model DailyQuestion {
+  id               String           @id @default(uuid())
+  text             String           
+  category         String           
+  date             DateTime         @default(now()) 
+  
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
+  answers          QuestionAnswer[] 
+
+  @@unique([date, relationshipId]) 
 }
 
 // ✍️ A Resposta à Pergunta
 model QuestionAnswer {
-  id         String        @id @default(uuid())
-  content    String
+  id               String           @id @default(uuid())
+  content          String
   
-  userId     String
-  user       User          @relation(fields: [userId], references: [id])
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
   
-  questionId String
-  question   DailyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         DailyQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
   
-  createdAt  DateTime      @default(now())
+  createdAt        DateTime         @default(now())
 
-  @@unique([userId, questionId]) // O usuário só pode responder uma vez por pergunta
+  @@unique([userId, questionId]) 
 }
 
-// 🎲 Roleta de Encontros (Date Ideas)
+// 🎲 Roleta de Encontros
 model DateIdea {
-  id             String       @id @default(uuid())
-  title          String
-  category       String       // "FUN", "ROMANTIC", "SPICY"
-  isCompleted    Boolean      @default(false) // Permite marcar como feito
+  id               String           @id @default(uuid())
+  title            String
+  category         String           
+  isCompleted      Boolean          @default(false) 
   
-  relationshipId String
-  relationship   Relationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
 
-  createdAt      DateTime     @default(now())
+  createdAt        DateTime         @default(now())
+}
+
+// 🎯 Metas do Casal (Persistentes - Sprint 1)
+model Goal {
+  id               String           @id @default(uuid())
+  title            String
+  isCompleted      Boolean          @default(false)
+  
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
+  createdAt        DateTime         @default(now())
 }
 
 // ⭐ Favoritos
 model Favorite {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  postId    String?
-  post      Post?    @relation(fields: [postId], references: [id])
-  messageId String?
-  message   Message? @relation(fields: [messageId], references: [id])
-  createdAt DateTime @default(now())
+  id               String           @id @default(uuid())
+  
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+  
+  postId           String?
+  post             Post?            @relation(fields: [postId], references: [id])
+  
+  messageId        String?
+  message          Message?         @relation(fields: [messageId], references: [id])
+  
+  createdAt        DateTime         @default(now())
+}
+
+// 🎟️ Sistema de Monetização (Licenças de Acesso)
+model License {
+  id          String   @id @default(uuid())
+  key         String   @unique             
+  isUsed      Boolean  @default(false)     
+  createdAt   DateTime @default(now())
 }
