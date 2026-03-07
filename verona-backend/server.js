@@ -1,5 +1,5 @@
 // ==========================================
-// VERONA OS - BACKEND SÊNIOR (Sprint 3 - Identidade & Automação)
+// VERONA OS - BACKEND SÊNIOR (Sprint 4 - Notifications & Sincronia)
 // ==========================================
 const express = require('express');
 const http = require('http');
@@ -43,7 +43,7 @@ const uploadImage = async (base64Image) => {
 };
 
 // ==========================================
-// 📧 CONFIGURAÇÃO DO DISPARADOR DE E-MAILS
+// 📧 CONFIGURAÇÃO DO DISPARADOR DE E-MAILS E 🔔 NOTIFICAÇÕES
 // ==========================================
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -51,9 +51,26 @@ const transporter = nodemailer.createTransport({
 });
 
 const enviarEmail = async (para, assunto, texto) => {
-  if (!process.env.EMAIL_USER) return console.log(`Simulação de E-mail para ${para}: ${assunto}`);
-  try { await transporter.sendMail({ from: '"Verona" <verona@vrtice.com.br>', to: para, subject: assunto, text: texto }); } 
-  catch (error) { console.error("Erro ao enviar e-mail:", error); }
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log(`⚠️ ALERTA: E-mail não enviado para ${para} porque EMAIL_USER ou EMAIL_PASS não estão no .env! Simulando envio...`);
+    return;
+  }
+  try { 
+    await transporter.sendMail({ from: '"Verona" <verona@vrtice.com.br>', to: para, subject: assunto, text: texto }); 
+    console.log(`✅ E-mail disparado com sucesso para: ${para}`);
+  } catch (error) { console.error("❌ Erro ao enviar e-mail:", error); }
+};
+
+// MOTOR DE NOTIFICAÇÕES (Gera a bolinha vermelha no sininho)
+const criarNotificacao = async (type, text, senderId, relationshipId) => {
+  try {
+    const parceiro = await prisma.user.findFirst({ where: { relationshipId, id: { not: senderId } } });
+    if (parceiro) {
+      await prisma.notification.create({
+        data: { type, text, userId: parceiro.id, relationshipId }
+      });
+    }
+  } catch (error) { console.error("Erro ao criar notificação:", error); }
 };
 
 // 🛡️ MIDDLEWARE DE SEGURANÇA
@@ -93,7 +110,7 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
       where: { id: req.user.userId }, 
       include: { relationship: { include: { goals: true } } } 
     });
-    // NOVO: Busca o parceiro para renderizar o Perfil Duplo no Frontend
+    // Busca o parceiro para renderizar o Perfil Duplo no Frontend
     const partner = await prisma.user.findFirst({ 
       where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }
     });
@@ -104,7 +121,6 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    // NOVO: Recebe o 'coupleName' para personalização
     const { name, email, username, password, inviteCode, licenseKey, coupleName } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
     
@@ -127,7 +143,6 @@ app.post('/auth/register', async (req, res) => {
       const licencaValida = await prisma.license.findUnique({ where: { key: licenseKey } });
       if (!licencaValida || licencaValida.isUsed) return res.status(403).json({ error: 'Licença inválida ou já utilizada.' });
 
-      // Cria o cofre já com o nome do casal (ou o padrão)
       const novoRel = await prisma.relationship.create({ data: { name: coupleName || "Nosso Mundo" } });
       relationshipId = novoRel.id;
       
@@ -150,7 +165,6 @@ app.post('/auth/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id, relationshipId: user.relationshipId, name: user.name }, JWT_SECRET, { expiresIn: '365d' });
     
-    // NOVO: Envia o parceiro no login para o Perfil Duplo
     const partner = await prisma.user.findFirst({ where: { relationshipId: user.relationshipId, id: { not: user.id } }});
     res.json({ token, user, relationship: user.relationship, partner });
   } catch (error) { res.status(500).json({ error: 'Erro no login.' }); }
@@ -172,7 +186,6 @@ app.put('/users/me', authenticateToken, async (req, res) => {
       dataToUpdate.avatarUrl = avatarUrl;
     }
     
-    // NOVO: Capa do perfil individual
     if (coverUrl && coverUrl.startsWith('data:image')) {
       dataToUpdate.coverUrl = await uploadImage(coverUrl);
     }
@@ -182,7 +195,6 @@ app.put('/users/me', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ error: 'Erro ao atualizar perfil.' }); }
 });
 
-// NOVO: Murais Privados do Perfil
 app.get('/profile-posts/:userId', authenticateToken, async (req, res) => {
   try {
     const posts = await prisma.profilePost.findMany({ where: { authorId: req.params.userId }, orderBy: { createdAt: 'desc' } });
@@ -199,6 +211,44 @@ app.post('/profile-posts', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ error: 'Erro no mural.' }); }
 });
 
+// ==========================================
+// 🔔 ROTAS DE NOTIFICAÇÃO (SININHO)
+// ==========================================
+app.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifs = await prisma.notification.findMany({
+      where: { userId: req.user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+    res.json(notifs);
+  } catch (error) { res.status(500).json({ error: 'Erro ao buscar notificações.' }); }
+});
+
+app.put('/notifications/read', authenticateToken, async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.userId, isRead: false },
+      data: { isRead: true }
+    });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Erro ao marcar lidas.' }); }
+});
+
+app.post('/notifications/miss-you', authenticateToken, async (req, res) => {
+  try {
+    const { customMessage } = req.body;
+    
+    // NOVO: Adiciona no Sininho do parceiro
+    await criarNotificacao('MISS_YOU', customMessage || 'Está pensando em você...', req.user.userId, req.user.relationshipId);
+
+    const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
+    if (parceiro) {
+      await enviarEmail(parceiro.email, `🔥 ${req.user.name} está pensando em você...`, `Mensagem direta do Verona:\n\n"${customMessage}"\n\nAbra o aplicativo para responder.`);
+    }
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Erro ao enviar notificação.' }); }
+});
 
 // ==========================================
 // 📸 GALERIA DE MEMÓRIAS (Carrossel 9:16)
@@ -225,6 +275,9 @@ app.post('/memories', authenticateToken, async (req, res) => {
       data: { imageUrl, description, authorId: req.user.userId, relationshipId: req.user.relationshipId },
       include: { author: { select: { name: true, avatarUrl: true } } }
     });
+
+    // NOVO: Adiciona no Sininho
+    await criarNotificacao('NEW_MEMORY', `Adicionou uma nova memória visual.`, req.user.userId, req.user.relationshipId);
 
     const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
     if (parceiro) enviarEmail(parceiro.email, `Novo Momento Guardado 📸`, `${req.user.name} acabou de colocar uma nova memória no carrossel de vocês. Corra para ver.`);
@@ -277,6 +330,13 @@ app.post('/posts', authenticateToken, async (req, res) => {
       include: { author: { select: { name: true, username: true, avatarUrl: true } } }
     });
     
+    // NOVO: Adiciona notificação no Sininho
+    if (!parentId) {
+      await criarNotificacao('NEW_POST', `Compartilhou algo novo no canal.`, req.user.userId, req.user.relationshipId);
+    } else {
+      await criarNotificacao('NEW_REPLY', `Respondeu a uma postagem.`, req.user.userId, req.user.relationshipId);
+    }
+
     const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
     if (parceiro && !parentId) enviarEmail(parceiro.email, `Nova postagem de ${req.user.name}`, `Corra no Verona para ver a nova mensagem no canal.`);
     res.status(201).json(novoPost);
@@ -284,30 +344,16 @@ app.post('/posts', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 💖 ROTA DE NOTIFICAÇÃO DIRETA (Pensando em Você)
-// ==========================================
-app.post('/notifications/miss-you', authenticateToken, async (req, res) => {
-  try {
-    const { customMessage } = req.body;
-    const parceiro = await prisma.user.findFirst({ where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }});
-    if (parceiro) {
-      await enviarEmail(parceiro.email, `🔥 ${req.user.name} está pensando em você...`, `Mensagem direta do Verona:\n\n"${customMessage}"\n\nAbra o aplicativo para responder.`);
-    }
-    res.json({ success: true });
-  } catch (error) { res.status(500).json({ error: 'Erro ao enviar notificação.' }); }
-});
-
-// ==========================================
-// 💾 PERSISTÊNCIA DE METAS E DATAS (Atualizado com Spotify e Capa)
+// 💾 PERSISTÊNCIA DE METAS E DATAS
 // ==========================================
 app.put('/relationship', authenticateToken, async (req, res) => {
   try {
-    const { startDate, firstKiss, name, spotifyUri, coverImageUrl } = req.body;
+    // Spotify Removido
+    const { startDate, firstKiss, name, coverImageUrl } = req.body;
     const dataToUpdate = {};
     if (startDate) dataToUpdate.startDate = new Date(startDate);
     if (firstKiss) dataToUpdate.firstKiss = new Date(firstKiss);
     if (name) dataToUpdate.name = name;
-    if (spotifyUri !== undefined) dataToUpdate.spotifyUri = spotifyUri;
     
     if (coverImageUrl && coverImageUrl.startsWith('data:image')) {
       dataToUpdate.coverImageUrl = await uploadImage(coverImageUrl);
@@ -385,10 +431,8 @@ app.post('/daily-question/answer', authenticateToken, async (req, res) => {
       const rel = await prisma.relationship.findUnique({ where: { id: req.user.relationshipId } });
       await prisma.relationship.update({ where: { id: req.user.relationshipId }, data: { streakCount: rel.streakCount + 1, lastAnswerDate: new Date() } });
       
-      // NOVO: Automação - Cria post no canal #perguntasdodia
       const sysChannel = await prisma.channel.findFirst({ where: { relationshipId: req.user.relationshipId, isSystem: true, name: 'perguntasdodia' } });
       if (sysChannel) {
-         // Formata o texto bonito
          const autor1 = question.relationship.users.find(u => u.id === question.answers[0].userId).name;
          const autor2 = question.relationship.users.find(u => u.id === question.answers[1].userId).name;
          const postContent = `🎯 **A Pergunta do Dia:** ${question.text}\n\n💬 **${autor1}:** ${question.answers[0].content}\n💬 **${autor2}:** ${question.answers[1].content}`;
@@ -434,4 +478,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 3) rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Verona 1.0 (Sprint 4) rodando na porta ${PORT}`));

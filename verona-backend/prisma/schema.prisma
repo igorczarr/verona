@@ -14,7 +14,6 @@ model Relationship {
   status           String           @default("PENDING")
   
   name             String?          @default("Nosso Mundo") // Nome do Casal
-  spotifyUri       String?          // Link da música do casal
   
   startDate        DateTime? 
   firstDate        DateTime? 
@@ -34,24 +33,25 @@ model Relationship {
   dateIdeas        DateIdea[]      
   goals            Goal[]           
   memories         Memory[]         
+  notifications    Notification[]   // NOVO: Histórico de notificações do casal
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }
 
-// 👤 Perfil do Usuário (Preparado para Sprint 2: Perfil Duplo)
+// 👤 Perfil do Usuário
 model User {
   id               String           @id @default(uuid())
   email            String           @unique 
   username         String           @unique
-  passwordHash     String        
+  passwordHash     String         
   name             String
   
   // Personalização Individual
   avatarUrl        String?
   coverUrl         String?          // Capa do perfil individual
   bio              String?          // Biografia curta
-  moodStatus       String?       
+  moodStatus       String?        
   phoneNumber      String?
 
   relationshipId   String?
@@ -63,22 +63,41 @@ model User {
   favorites        Favorite[]
   answers          QuestionAnswer[]
   memories         Memory[]         // Autor das memórias da galeria
+  
+  // NOVO: Notificações recebidas pelo usuário
+  notifications    Notification[]   @relation("UserNotifications")
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }
 
+// 🔔 Sistema de Notificações Internas (NOVO - Sprint 4)
+model Notification {
+  id               String           @id @default(uuid())
+  type             String           // Ex: "MISS_YOU", "NEW_POST", "NEW_MEMORY"
+  text             String           // O texto que vai aparecer no sininho
+  isRead           Boolean          @default(false)
+  
+  userId           String           // O usuário que VAI RECEBER a notificação
+  user             User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  
+  relationshipId   String
+  relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime         @default(now())
+}
+
 // 📺 Canais
 model Channel {
   id               String           @id @default(uuid())
-  name             String        
+  name             String         
   description      String?
   isSystem         Boolean          @default(false) // Trava canais como #perguntasdodia
   
   relationshipId   String
   relationship     Relationship     @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
   
-  posts            Post[]        
+  posts            Post[]         
   createdAt        DateTime         @default(now())
 
   @@unique([name, relationshipId])
@@ -109,7 +128,7 @@ model Post {
   createdAt        DateTime         @default(now())
 }
 
-// 📌 Posts do Perfil Individual (Sprint 2)
+// 📌 Posts do Perfil Individual
 model ProfilePost {
   id               String           @id @default(uuid())
   content          String
@@ -121,7 +140,7 @@ model ProfilePost {
   createdAt        DateTime         @default(now())
 }
 
-// 📸 Memórias (Feed 9:16 - Sprint 5)
+// 📸 Memórias (Feed 9:16)
 model Memory {
   id               String           @id @default(uuid())
   imageUrl         String
@@ -136,7 +155,7 @@ model Memory {
   createdAt        DateTime         @default(now())
 }
 
-// 💬 Chat Privado (Preparado para Histórico Eterno)
+// 💬 Chat Privado 
 model Message {
   id               String           @id @default(uuid())
   content          String
@@ -195,7 +214,7 @@ model DateIdea {
   createdAt        DateTime         @default(now())
 }
 
-// 🎯 Metas do Casal (Persistentes - Sprint 1)
+// 🎯 Metas do Casal
 model Goal {
   id               String           @id @default(uuid())
   title            String
