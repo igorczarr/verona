@@ -32,12 +32,16 @@ cloudinary.config({
 });
 
 const uploadImage = async (base64Image) => {
-  if (!process.env.CLOUDINARY_CLOUD_NAME) return base64Image; 
+  // BLINDAGEM: Evita o erro "Invalid cloud_name Root" no terminal
+  if (!process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME === 'Root') {
+    console.log("⚠️ AVISO: Cloudinary não configurado. Mantendo a imagem em Base64 localmente.");
+    return base64Image; 
+  }
   try {
     const result = await cloudinary.uploader.upload(base64Image, { folder: "verona_santuario" });
     return result.secure_url;
   } catch (error) {
-    console.error("Erro no Cloudinary:", error);
+    console.error("⚠️ Erro no Cloudinary (Usando fallback Base64):", error.message);
     return base64Image;
   }
 };
@@ -70,7 +74,7 @@ const criarNotificacao = async (type, text, senderId, relationshipId) => {
         data: { type, text, userId: parceiro.id, relationshipId }
       });
     }
-  } catch (error) { console.error("Erro ao criar notificação:", error); }
+  } catch (error) { console.error("Erro ao criar notificação:", error.message); }
 };
 
 // 🛡️ MIDDLEWARE DE SEGURANÇA
@@ -110,13 +114,20 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
       where: { id: req.user.userId }, 
       include: { relationship: { include: { goals: true } } } 
     });
-    // Busca o parceiro para renderizar o Perfil Duplo no Frontend
-    const partner = await prisma.user.findFirst({ 
-      where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }
-    });
+    
+    let partner = null;
+    if (req.user.relationshipId) {
+      partner = await prisma.user.findFirst({ 
+        where: { relationshipId: req.user.relationshipId, id: { not: req.user.userId } }
+      });
+    }
+
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
     res.json({ user, relationship: user.relationship, partner });
-  } catch (error) { res.status(500).json({ error: 'Erro ao restaurar sessão.' }); }
+  } catch (error) { 
+    console.error("[AUTH/ME ERRO FATAL]:", error);
+    res.status(500).json({ error: 'Erro ao restaurar sessão.' }); 
+  }
 });
 
 app.post('/auth/register', async (req, res) => {
@@ -154,20 +165,43 @@ app.post('/auth/register', async (req, res) => {
 
     const newUser = await prisma.user.create({ data: { name, email, username, passwordHash, relationshipId }, include: { relationship: true } });
     res.status(201).json({ message: 'Sucesso', inviteCode: newUser.relationship.inviteCode, status: novoStatus });
-  } catch (error) { res.status(500).json({ error: 'Erro ao registrar.' }); }
+  } catch (error) { 
+    console.error("[REGISTER ERRO FATAL]:", error);
+    res.status(500).json({ error: 'Erro ao registrar.' }); 
+  }
 });
 
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log(`[LOGIN] Tentativa de acesso para: ${email}`);
+
     const user = await prisma.user.findUnique({ where: { email }, include: { relationship: { include: { goals: true } } } });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Credenciais inválidas.' });
+    
+    if (!user) {
+      console.log(`[LOGIN] Falha: E-mail não encontrado (${email})`);
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      console.log(`[LOGIN] Falha: Senha incorreta para (${email})`);
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
 
     const token = jwt.sign({ userId: user.id, relationshipId: user.relationshipId, name: user.name }, JWT_SECRET, { expiresIn: '365d' });
     
-    const partner = await prisma.user.findFirst({ where: { relationshipId: user.relationshipId, id: { not: user.id } }});
+    let partner = null;
+    if (user.relationshipId) {
+      partner = await prisma.user.findFirst({ where: { relationshipId: user.relationshipId, id: { not: user.id } }});
+    }
+
+    console.log(`[LOGIN] Sucesso para: ${email}`);
     res.json({ token, user, relationship: user.relationship, partner });
-  } catch (error) { res.status(500).json({ error: 'Erro no login.' }); }
+  } catch (error) { 
+    console.error("🚨 [LOGIN ERRO FATAL]:", error);
+    res.status(500).json({ error: 'Erro interno no login.' }); 
+  }
 });
 
 // ==========================================
@@ -349,11 +383,12 @@ app.post('/posts', authenticateToken, async (req, res) => {
 app.put('/relationship', authenticateToken, async (req, res) => {
   try {
     // Spotify Removido
-    const { startDate, firstKiss, name, coverImageUrl } = req.body;
+    const { startDate, firstKiss, name, coverImageUrl, spotifyUri } = req.body;
     const dataToUpdate = {};
     if (startDate) dataToUpdate.startDate = new Date(startDate);
     if (firstKiss) dataToUpdate.firstKiss = new Date(firstKiss);
     if (name) dataToUpdate.name = name;
+    if (spotifyUri !== undefined) dataToUpdate.spotifyUri = spotifyUri;
     
     if (coverImageUrl && coverImageUrl.startsWith('data:image')) {
       dataToUpdate.coverImageUrl = await uploadImage(coverImageUrl);
