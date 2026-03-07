@@ -1,6 +1,10 @@
+<!-- src/App.vue -->
 <template>
   <div data-theme="premium-glass" class="app-master-wrapper">
     
+    <!-- ========================================== -->
+    <!-- TELA DE LOGIN (PERFEITAMENTE ALINHADA)     -->
+    <!-- ========================================== -->
     <div v-if="!usuarioLogado" class="login-wrapper">
       <div class="login-orb orb-1"></div>
       <div class="login-orb orb-2"></div>
@@ -12,7 +16,7 @@
         <h1 class="playfair login-title">Verona</h1>
         <p class="login-subtitle">Onde o nosso amor é imortal.</p>
         
-        <form @submit.prevent="modoAuth === 'login' ? fazerLogin() : fazerCadastro()" style="width: 100%;">
+        <form @submit.prevent="modoAuth === 'login' ? fazerLogin() : fazerCadastro()" class="login-form">
           <template v-if="modoAuth === 'register'">
             <input type="text" class="glass-input-premium" placeholder="Como quer ser chamado?" v-model="nome" required />
             <input type="text" class="glass-input-premium" placeholder="@usuario" v-model="username" required />
@@ -29,7 +33,7 @@
             <input v-if="!codigoConvite" type="text" class="glass-input-premium" placeholder="Licença de Acesso (VRN-...)" v-model="licenseKey" />
           </template>
 
-          <button type="submit" class="btn-glass-standard" style="width: 100%; margin-top: 15px; padding: 18px; font-size: 16px;">
+          <button type="submit" class="btn-neon-large" style="width: 100%; margin-top: 15px;">
             {{ modoAuth === 'login' ? 'Acessar Santuário' : 'Criar Nosso Cofre' }}
           </button>
         </form>
@@ -40,19 +44,24 @@
       </div>
     </div>
 
+    <!-- AGUARDANDO PARCEIRO -->
     <div v-else-if="usuarioLogado.relationship.status === 'PENDING'" class="login-wrapper">
        <div class="glass-login-panel text-center">
           <Heart :size="60" color="var(--accent-color)" style="margin-bottom: 20px" class="float-anim" />
-          <h2 class="playfair" style="font-size: 32px; margin-bottom: 10px; color: white;">Falta pouco!</h2>
+          <h2 class="playfair login-title" style="margin-bottom: 10px;">Falta pouco!</h2>
           <p style="color: rgba(255,255,255,0.7);">Envie este código para o seu amor usar no cadastro:</p>
           <h3 class="invite-code-box">{{ usuarioLogado.relationship.inviteCode }}</h3>
           <button class="btn-glass-standard" style="width: 100%; padding: 18px;" @click="copiarCodigo">Copiar Código</button>
        </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- SISTEMA PRINCIPAL                          -->
+    <!-- ========================================== -->
     <div v-else class="app-master-layout" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
       
-      <div class="mobile-header">
+      <!-- HEADER EXCLUSIVO MOBILE (Só aparece em telas pequenas) -->
+      <div class="mobile-header hide-on-desktop">
         <div style="display: flex; align-items: center; gap: 10px;">
           <Sparkles :size="24" color="var(--accent-color)" /> 
           <span class="playfair" style="font-size: 22px; font-weight: bold; color: white;">Verona</span>
@@ -63,6 +72,7 @@
         </button>
       </div>
 
+      <!-- SIDEBAR ESCURA (MENU LATERAL) -->
       <aside class="desktop-sidebar" :class="{ collapsed: sidebarCollapsed }">
         <div class="sidebar-brand-area">
           <div class="workspace-brand cursor-pointer" @click="irParaPerfil(usuarioLogado.id)" v-show="!sidebarCollapsed">
@@ -70,11 +80,12 @@
               <img v-if="usuarioLogado.avatarUrl" :src="usuarioLogado.avatarUrl" />
               <template v-else>{{ getInicial(usuarioLogado.name) }}</template>
             </div>
-            <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
               <span style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Logado como</span>
-              <span class="playfair" style="font-size: 18px; color: white; line-height: 1.2;">{{ usuarioLogado.name }}</span>
+              <span class="playfair" style="font-size: 18px; color: white; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ usuarioLogado.name }}</span>
             </div>
           </div>
+          <!-- Avatar Visível quando retraído -->
           <div class="sidebar-avatar cursor-pointer" @click="irParaPerfil(usuarioLogado.id)" v-show="sidebarCollapsed" style="margin-bottom: 30px;">
               <img v-if="usuarioLogado.avatarUrl" :src="usuarioLogado.avatarUrl" />
               <template v-else>{{ getInicial(usuarioLogado.name) }}</template>
@@ -106,11 +117,11 @@
           <div class="nav-section-title"><span v-show="!sidebarCollapsed">Explorar</span></div>
           <div class="nav-item" :class="{ active: abaAtiva === 'nosso-perfil' }" @click="mudarAba('nosso-perfil')">
             <Heart :size="18" style="opacity: 0.6;" /> 
-            <span class="nav-text" v-show="!sidebarCollapsed">{{ usuarioLogado.relationship.name || 'Nosso Mundo' }}</span>
+            <span class="nav-text" v-show="!sidebarCollapsed">Nosso Mundo</span>
           </div>
           <div class="nav-item" :class="{ active: abaAtiva === 'nossos-perfis' }" @click="mudarAba('nossos-perfis')">
             <UserIcon :size="18" style="opacity: 0.6;" /> 
-            <span class="nav-text" v-show="!sidebarCollapsed">Perfis</span>
+            <span class="nav-text" v-show="!sidebarCollapsed">Ver Perfis</span>
           </div>
         </div>
 
@@ -118,8 +129,8 @@
            <div class="streak-box" v-show="!sidebarCollapsed" style="width: 100%;">
               🔥 {{ usuarioLogado.relationship.streakCount }} Dias Juntos
            </div>
-           <button @click="abrirModalSaudade" class="btn-glass-standard" style="width: 100%; padding: 14px;">
-             <Flame :size="18"/> <span v-show="!sidebarCollapsed">Pensando em você</span>
+           <button @click="abrirModalSaudade" class="btn-glass-standard" style="width: 100%; padding: 14px; border: 1px solid rgba(255,255,255,0.2);">
+             <Flame :size="18" color="#F43F5E"/> <span v-show="!sidebarCollapsed">Pensando em você</span>
            </button>
            <div class="nav-item text-danger" @click="fazerLogout" style="margin-top: 5px; width: 100%;">
              <LogOut :size="18" /> 
@@ -128,24 +139,30 @@
         </div>
       </aside>
 
+      <!-- PALCO PRINCIPAL (ÁREA DE NAVEGAÇÃO CLARA) -->
       <main class="main-stage">
         
+        <!-- HEADER FLUTUANTE (TOP NAV) -->
         <header class="top-nav-glass">
           <div class="top-nav-left">
-            <template v-if="abaAtiva === 'nossos-perfis'">
-               <div class="dual-toggle-pill glass-panel">
-                  <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">Eu</button>
-                  <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro.name }}</button>
-               </div>
-            </template>
-            <template v-else-if="abaAtiva === 'feed' && canalAtivo">
-               <h2 class="stage-title playfair"><span style="color: var(--accent-color)">#</span> {{ canalAtivo.name }}</h2>
-            </template>
-            <template v-else>
-               </template>
+             <h2 class="stage-title playfair" v-if="abaAtiva === 'feed' && canalAtivo">
+               <span style="color: var(--accent-color)">#</span> {{ canalAtivo.name }}
+             </h2>
+             <h2 class="stage-title playfair" v-else-if="abaAtiva !== 'nosso-perfil' && abaAtiva !== 'nossos-perfis'">
+               {{ usuarioLogado.relationship.name }}
+             </h2>
+             <div v-else></div> <!-- Deixa vazio para "Nosso Mundo" pois a capa tem o nome -->
           </div>
           
           <div class="top-nav-right">
+             
+             <!-- A CHAVINHA DE PERFIL AGORA MORA AQUI (PERFEITAMENTE ALINHADA) -->
+             <div class="dual-toggle-pill glass-card" v-if="abaAtiva === 'nossos-perfis'">
+                <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">Eu</button>
+                <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro.name }}</button>
+             </div>
+
+             <!-- STATUS DO PARCEIRO REDONDO -->
              <div v-if="parceiro" class="partner-status-pill">
                 <div class="partner-avatar-round cursor-pointer" @click="irParaPerfil(parceiro.id)">
                    <img v-if="parceiro.avatarUrl" :src="parceiro.avatarUrl" />
@@ -156,6 +173,7 @@
                 </div>
              </div>
 
+             <!-- NOTIFICAÇÕES -->
              <div class="notification-wrapper">
                 <button @click="toggleNotificacoes" class="icon-btn-round">
                    <Bell :size="18" />
@@ -176,10 +194,14 @@
                 </div>
              </div>
 
+             <!-- CONFIGURAÇÕES -->
              <button class="icon-btn-round" @click="modalConfigAberto = true"><Settings :size="18" /></button>
           </div>
         </header>
 
+        <!-- ========================================== -->
+        <!-- ABA FEED / CANAIS (COM SCROLL BLINDADO)    -->
+        <!-- ========================================== -->
         <template v-if="abaAtiva === 'feed'">
           <div class="scroll-area pad-top-nav pad-responsive">
             
@@ -189,7 +211,7 @@
                
                <div v-if="!dailyQuestion.myAnswer" class="daily-answer-form">
                  <input type="text" class="glass-input-light" placeholder="Sua resposta sincera..." v-model="minhaRespostaDaily" @keydown.enter.prevent="responderDaily" />
-                 <button class="btn-glass-standard" style="padding: 15px 30px; font-weight: 800;" @click="responderDaily">Responder</button>
+                 <button class="btn-glass-standard white-text" style="padding: 15px 30px; font-weight: 800;" @click="responderDaily">Responder</button>
                </div>
                <div v-else class="daily-answers-grid">
                  <div class="answer-card">
@@ -270,14 +292,14 @@
                  <div class="composer-tools">
                    <input type="file" ref="postInputRef" style="display: none" accept="image/*" @change="onPostImageSelected" />
                    <button class="btn-glass-standard" style="padding: 8px 15px;" @click="() => postInputRef.click()" :class="{ 'active': imagemPostBase64 }">
-                      <ImageIcon :size="16"/> <span>{{ imagemPostBase64 ? 'Imagem Pronta' : 'Foto' }}</span>
+                      <ImageIcon :size="16"/> <span class="hide-mobile-text">{{ imagemPostBase64 ? 'Imagem Pronta' : 'Foto' }}</span>
                    </button>
                    <button class="btn-glass-standard" style="padding: 8px 15px;" @click="modoCapsula = !modoCapsula" :class="{ 'active': modoCapsula }">
-                      <Clock :size="16"/> <span>Cápsula</span>
+                      <Clock :size="16"/> <span class="hide-mobile-text">Cápsula</span>
                    </button>
                  </div>
                  
-                 <button class="btn-glass-standard" @click="enviarPost" :disabled="isUploading" style="border-radius: 50%; padding: 12px;">
+                 <button class="btn-primary-send" @click="enviarPost" :disabled="isUploading">
                     <template v-if="isUploading"><Loader2 class="spin" :size="16"/></template>
                     <template v-else><Send :size="16"/></template>
                  </button>
@@ -290,9 +312,13 @@
           </div>
         </template>
 
+        <!-- ========================================== -->
+        <!-- ABA NOSSO MUNDO (O GRID DEFINITIVO)        -->
+        <!-- ========================================== -->
         <template v-if="abaAtiva === 'nosso-perfil'">
-          <div class="scroll-area pad-responsive" style="padding: 0;">
+          <div class="scroll-area" style="padding: 0;">
              
+             <!-- CAPA COLOSSAL (Colada no topo, respeitando margens verticais) -->
              <div class="mundo-master-cover">
                 <img class="cover-img" :src="usuarioLogado.relationship.coverImageUrl || 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&fit=crop'" />
                 <div class="cover-gradient"></div>
@@ -306,10 +332,12 @@
                 </button>
              </div>
 
-             <div class="mundo-bento-grid-3">
+             <!-- GRID INFERIOR DE 3 COLUNAS (Perfeitamente Alinhadas) -->
+             <div class="mundo-bento-grid-3 pad-responsive">
                 
-                <div class="bento-glass-card memory-bento-card">
-                   <div class="card-header-flex">
+                <!-- COLUNA 1: CARROSSEL DE GALERIA 9:16 -->
+                <div class="bento-glass-card column-wrapper">
+                   <div class="card-header-flex" style="padding: 25px 25px 0 25px;">
                       <h3 class="playfair">Nossa Galeria</h3>
                       <input type="file" ref="memoryInputRef" style="display: none" accept="image/*" @change="onMemorySelected" />
                       <button @click="triggerMemoryInput" class="btn-glass-standard" :disabled="isUploadingMemory">
@@ -333,10 +361,11 @@
                    </div>
                 </div>
 
-                <div class="bento-glass-card history-bento-card">
+                <!-- COLUNA 2: HISTÓRIA E SONHOS VERTICALIZADOS -->
+                <div class="bento-glass-card column-wrapper" style="padding: 25px;">
                    <div class="card-header-flex">
                       <h3 class="playfair">Nossa História</h3>
-                      <button class="btn-glass-standard" @click="toggleEditDatas">{{ editandoDatas ? 'Salvar' : 'Editar' }}</button>
+                      <button class="btn-glass-standard" style="padding: 6px 12px; font-size: 11px;" @click="toggleEditDatas">{{ editandoDatas ? 'Salvar' : 'Editar' }}</button>
                    </div>
                    
                    <div class="timeline-row-vertical">
@@ -354,11 +383,11 @@
 
                    <div class="divider-line"></div>
 
-                   <div class="card-header-flex mt-3">
+                   <div class="card-header-flex mt-2">
                       <h4 class="playfair" style="font-size: 18px;">Nossos Sonhos</h4>
                       <button v-if="editandoDatas" @click="adicionarMeta" class="btn-circle-mini"><Plus :size="14" /></button>
                    </div>
-                   <div class="dreams-list scroll-area hide-scrollbar">
+                   <div class="dreams-list scroll-area hide-scrollbar" style="max-height: 200px;">
                       <div v-for="meta in metasCasal" :key="meta.id" class="dream-item">
                          <Sparkles :size="16" color="var(--accent-color)"/> <span>{{ meta.title }}</span>
                       </div>
@@ -366,11 +395,14 @@
                    </div>
                 </div>
 
-                <div class="bento-col-vertical">
-                   <div class="bento-glass-card spotify-bento-card">
-                      <div class="card-header-flex" style="margin-bottom: 10px;">
+                <!-- COLUNA 3: SPOTIFY E ROLETA (Tudo na mesma largura) -->
+                <div class="column-wrapper gap-vertical">
+                   
+                   <!-- Spotify -->
+                   <div class="bento-glass-card" style="padding: 25px;">
+                      <div class="card-header-flex" style="margin-bottom: 15px;">
                          <h3 class="playfair" style="display:flex; align-items:center; gap:8px;"><Music :size="18"/> Trilha Sonora</h3>
-                         <button class="btn-glass-standard" @click="modalConfigAberto = true">Editar</button>
+                         <button class="btn-glass-standard" style="padding: 6px 12px; font-size: 11px;" @click="modalConfigAberto = true">Editar</button>
                       </div>
                       <div class="spotify-wrapper">
                          <iframe v-if="usuarioLogado.relationship.spotifyUri" :src="formatarSpotifyIframe(usuarioLogado.relationship.spotifyUri)" width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 16px;"></iframe>
@@ -380,13 +412,14 @@
                       </div>
                    </div>
 
+                   <!-- Roleta Incorporada -->
                    <div class="bento-glass-card roleta-bento-card">
                       <div class="roleta-inner text-center">
                          <div class="icon-pulse-wrapper">
                             <Calendar :size="28" color="white" />
                          </div>
                          <h4 class="playfair" style="font-size: 20px;">O Destino</h4>
-                         <p class="subtitle-tiny">Sorteie um date e criaremos a sala de planejamento para vocês.</p>
+                         <p class="subtitle-tiny">Sorteie um date e criaremos a sala de planejamento.</p>
                          
                          <div v-if="isSpinning" class="loading-state-tiny">
                             <Loader2 class="spin" :size="20" color="var(--accent-color)" /> Sorteando...
@@ -394,19 +427,22 @@
                          <div v-else-if="ideaSorteada" class="result-tiny slide-up">
                             {{ ideaSorteada.title }}
                          </div>
-                         <button class="btn-glass-standard" style="width:100%; border-radius: 20px; padding: 12px; font-weight: 800;" @click="girarRoletaAnimado" :disabled="isSpinning">
+                         
+                         <button class="btn-glass-standard" style="width:100%; border-radius: 20px; padding: 14px; font-weight: 800; background: rgba(255,255,255,0.8);" @click="girarRoletaAnimado" :disabled="isSpinning">
                             Sortear Encontro
                          </button>
                       </div>
                    </div>
+                   
                 </div>
 
              </div>
           </div>
         </template>
 
+        <!-- === ABA PERFIS DUPLOS (COM FOTO ALINHADA E ABA MURAL) === -->
         <template v-if="abaAtiva === 'nossos-perfis'">
-          <div class="scroll-area pad-responsive" style="padding: 0;">
+          <div class="scroll-area" style="padding: 0;">
              
              <div class="profile-hero-expanded" v-if="perfilDados">
                 <div class="mundo-master-cover">
@@ -418,13 +454,13 @@
                    </button>
                 </div>
 
-                <div class="hero-info-wrapper">
+                <div class="hero-info-wrapper pad-responsive">
                    <div class="hero-avatar-box">
                       <img v-if="perfilDados.avatarUrl" :src="perfilDados.avatarUrl" />
                       <template v-else>{{ getInicial(perfilDados.name) }}</template>
                       
                       <input type="file" ref="fileInputRef" style="display: none" accept="image/*" @change="onFileSelected" />
-                      <button v-if="perfilVisivel === 'me'" @click="() => $refs.fileInputRef.click()" class="btn-edit-avatar-small">
+                      <button v-if="perfilVisivel === 'me'" @click="triggerFileInput" class="btn-edit-avatar-small">
                         <Camera :size="14" v-if="!isUploadingAvatar" />
                         <Loader2 :size="14" class="spin" v-else />
                       </button>
@@ -459,13 +495,13 @@
                    </div>
                 </div>
 
-                <div class="profile-tabs">
+                <div class="profile-tabs pad-responsive">
                    <button :class="{'active': perfilAbaAtiva === 'mural'}" @click="perfilAbaAtiva = 'mural'">Mural Pessoal</button>
                    <button :class="{'active': perfilAbaAtiva === 'comentarios'}" @click="perfilAbaAtiva = 'comentarios'">Comentários</button>
                    <button v-if="perfilVisivel === 'me'" :class="{'active': perfilAbaAtiva === 'salvos'}" @click="perfilAbaAtiva = 'salvos'">Salvos</button>
                 </div>
                 
-                <div class="profile-tab-content">
+                <div class="profile-tab-content pad-responsive">
                    
                    <div v-if="perfilAbaAtiva === 'mural'">
                       <div v-if="perfilVisivel === 'me'" class="glass-panel" style="padding: 20px; border-radius: 24px; margin-bottom: 30px;">
@@ -505,6 +541,10 @@
         </template>
       </main>
 
+      <!-- ========================================== -->
+      <!-- MODALS ABSOLUTOS (AJUSTADOS PARA NÃO VAZAR)-->
+      <!-- ========================================== -->
+      
       <div v-if="modalSaudadeAberto" class="modal-overlay-blur">
          <div class="modal-content-glass pop-in">
             <div class="modal-icon-circle"><Flame :size="40" color="#F43F5E" /></div>
@@ -521,7 +561,7 @@
       <div v-if="modalConfigAberto" class="modal-overlay-blur">
          <div class="modal-content-glass pop-in">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-               <h3 class="playfair title-large" style="margin:0;"><Settings :size="24" style="margin-right: 8px; vertical-align: middle;"/> Configurações</h3>
+               <h3 class="playfair title-large" style="margin:0; font-size: 24px;"><Settings :size="20" style="margin-right: 8px; vertical-align: middle;"/> Configurações</h3>
                <button @click="modalConfigAberto = false" class="btn-close-subtle"><X :size="20"/></button>
             </div>
             <label class="input-label" style="display:block; margin-bottom: 8px;">Música do Casal (Link Spotify)</label>
@@ -530,6 +570,9 @@
          </div>
       </div>
 
+      <!-- ========================================== -->
+      <!-- CHAT WIDGET (BLINDADO NA RAIZ DO APP)      -->
+      <!-- ========================================== -->
       <div class="chat-widget-absolute" :class="{ 'is-open': isChatOpen }">
         <button class="chat-trigger-btn" @click="isChatOpen = !isChatOpen">
           <MessageCircle v-if="!isChatOpen" :size="28" color="white" />
@@ -538,10 +581,11 @@
         
         <div class="chat-window-panel glass-panel" v-show="isChatOpen">
           <div class="chat-header-blur">
-            <div class="chat-header-info cursor-pointer" @click="irParaPerfil(parceiro?.id)">
+            <!-- Fallback Seguro para quando Parceiro não carregar imediatamente -->
+            <div class="chat-header-info cursor-pointer" @click="parceiro ? irParaPerfil(parceiro.id) : null">
                <div class="avatar-img-round" style="width: 40px; height: 40px; border:none; box-shadow:none;">
                  <img v-if="parceiro?.avatarUrl" :src="parceiro.avatarUrl" />
-                 <template v-else>{{ getInicial(parceiro?.name) }}</template>
+                 <template v-else>{{ getInicial(parceiro?.name || 'A') }}</template>
                </div>
                <div class="chat-header-text">
                  <span class="name">{{ parceiro?.name || 'Meu Amor' }}</span>
@@ -551,6 +595,7 @@
                  </span>
                </div>
             </div>
+            <!-- Botão fechar sutil -->
             <button @click="isChatOpen = false" class="btn-close-subtle" style="width: 30px; height: 30px;"><ChevronDown :size="20" /></button>
           </div>
           
@@ -588,7 +633,7 @@ import {
   BatteryWarning, Wine, Shield, Smile, ChevronDown
 } from 'lucide-vue-next'; 
 
-const URL_API = 'https://verona-api.onrender.com'; // Substitua na Vercel pelo Render
+const URL_API = 'https://verona-api.onrender.com'; // Servidor Oficial (Render)
 let socket = null;
 
 const usuarioLogado = ref(null);
@@ -605,7 +650,7 @@ const coupleName = ref('');
 const sidebarCollapsed = ref(false);
 const isMobileMenuOpen = ref(false);
 const isChatOpen = ref(false);
-const abaAtiva = ref('nosso-perfil'); 
+const abaAtiva = ref('feed'); // Abre sempre no Feed por padrão
 
 // MODALS E LOADERS
 const modalSaudadeAberto = ref(false);
@@ -635,6 +680,7 @@ const novoPostPerfilTexto = ref('');
 const novoPostPerfilImg = ref('');
 const profilePostInputRef = ref(null);
 const profileCoverInputRef = ref(null);
+const fileInputRef = ref(null);
 const mostrarMenuHumor = ref(false);
 
 const perfilDados = computed(() => {
@@ -705,8 +751,7 @@ onMounted(async () => {
       parceiro.value = res.data.partner;
       novaBio.value = usuarioLogado.value.bio || '';
       spotifyTemp.value = usuarioLogado.value.relationship.spotifyUri || '';
-      // Garante que o usuário abra no feed geral
-      abaAtiva.value = 'feed';
+      abaAtiva.value = 'feed'; // Força abrir no feed
     } catch (e) { localStorage.removeItem('verona_token'); }
   }
 });
@@ -717,8 +762,11 @@ watch(() => usuarioLogado.value, (user) => {
     formDatas.startDate = user.relationship.startDate ? user.relationship.startDate.split('T')[0] : '';
     formDatas.firstKiss = user.relationship.firstKiss ? user.relationship.firstKiss.split('T')[0] : '';
     metasCasal.value = user.relationship.goals || [];
+    
     if(!socket) {
-      socket = io(URL_API); socket.emit('entrar_na_sala', user.relationship.id);
+      // Força WebSockets nativos para evitar queda no Render
+      socket = io(URL_API, { transports: ['websocket', 'polling'] }); 
+      socket.emit('entrar_na_sala', user.relationship.id);
       socket.on('receber_mensagem', (msg) => mensagensChat.value.push(msg));
     }
   }
@@ -749,6 +797,8 @@ const salvarBio = async () => { try { await axios.put(`${URL_API}/users/me`, { b
 const onProfileCoverSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (ev) => { const b64 = ev.target.result; isUploadingProfileCover.value = true; try { await axios.put(`${URL_API}/users/me`, { coverUrl: b64 }); usuarioLogado.value.coverUrl = b64; } catch(err){} finally { isUploadingProfileCover.value = false; } }; reader.readAsDataURL(file); };
 const atualizarHumorEFechar = async (moodId) => { try { await axios.put(`${URL_API}/users/me`, { moodStatus: moodId }); usuarioLogado.value.moodStatus = moodId; mostrarMenuHumor.value = false; } catch(e) {} };
 
+// CORREÇÃO: Disparador do Avatar
+const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
 const onFileSelected = (event) => { 
   const file = event.target.files[0]; 
   if (!file) return; 
@@ -768,16 +818,13 @@ const onFileSelected = (event) => {
 const onRelCoverSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (ev) => { const b64 = ev.target.result; isUploadingCover.value = true; try { await axios.put(`${URL_API}/relationship`, { coverImageUrl: b64 }); usuarioLogado.value.relationship.coverImageUrl = b64; } catch(err){} finally { isUploadingCover.value = false; } }; reader.readAsDataURL(file); };
 const salvarConfig = async () => { try { await axios.put(`${URL_API}/relationship`, { spotifyUri: spotifyTemp.value }); usuarioLogado.value.relationship.spotifyUri = spotifyTemp.value; modalConfigAberto.value = false; } catch(e) {} };
 
-// PARSER SPOTIFY INTELIGENTE
+// PARSER SPOTIFY INTELIGENTE (Corrigido para aceitar links reais)
 const formatarSpotifyIframe = (link) => { 
   if(!link) return ''; 
   if (link.includes('embed')) return link; 
-  // Converte link padrão open.spotify.com para Iframe
-  const regex = /open\.spotify\.com\/(track|playlist|album)\/([a-zA-Z0-9]+)/;
+  const regex = /open\.spotify\.com\/(track|playlist|album|episode)\/([a-zA-Z0-9]+)/;
   const match = link.match(regex);
-  if(match) {
-     return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
-  }
+  if(match) return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
   return link;
 };
 
@@ -853,8 +900,8 @@ onUnmounted(() => { if (socket) socket.disconnect(); });
 /* ========================================== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap');
 
-/* REGRA DE OURO (BLINDAGEM DE TAMANHO DE CAIXAS) */
-*, *::before, *::after { box-sizing: border-box; }
+/* REGRA DE OURO GLOBAL: Evita que inputs e telas vazem */
+*, *::before, *::after { box-sizing: border-box; max-width: 100%; }
 
 :root {
   --bg-app: #F4F5F9;
@@ -880,16 +927,13 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .cursor-pointer { cursor: pointer; transition: 0.2s; }
 .hover-underline:hover { text-decoration: underline; color: var(--accent-color); }
 .text-center { text-align: center; }
-.flex-center { display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .mt-2 { margin-top: 10px; }
 .mt-3 { margin-top: 15px; }
 .mt-4 { margin-top: 20px; }
 .mb-0 { margin-bottom: 0 !important; }
-.mb-2 { margin-bottom: 10px; }
-.mb-4 { margin-bottom: 20px; }
 .text-danger { color: #EF4444 !important; }
 
-/* ANIMAÇÕES GERAIS */
+/* ANIMAÇÕES */
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -904,37 +948,37 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .app-master-wrapper { display: flex; height: 100vh; overflow: hidden; background: var(--bg-app); position: relative; width: 100vw; }
 .app-master-layout { display: flex; width: 100%; height: 100%; }
 
-/* GLASS PANELS */
+/* GLASS PANELS E PADDINGS */
 .glass-panel { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.8); }
 .glass-card { background: var(--bg-surface); border-radius: 30px; box-shadow: var(--shadow-ambient); border: 1px solid var(--border-soft); overflow: hidden; }
 .pad-responsive { padding: 0 40px; }
-.pad-top-nav { padding-top: 100px !important; }
+.pad-top-nav { padding-top: 110px !important; }
 
-/* BOTÃO UNIVERSAL (.btn-glass-standard) */
+/* BOTOES PADRONIZADOS */
 .btn-glass-standard { background: rgba(255,255,255,0.4); border: 1px solid rgba(0,0,0,0.1); color: var(--text-main); font-weight: 800; cursor: pointer; padding: 12px 20px; border-radius: 20px; font-size: 14px; backdrop-filter: blur(10px); display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s ease; box-shadow: var(--shadow-soft); }
 .btn-glass-standard:hover:not(:disabled) { background: rgba(255,255,255,0.8); transform: translateY(-2px); box-shadow: var(--shadow-ambient); color: var(--accent-color); border-color: var(--accent-glow); }
 .btn-glass-standard:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-glass-standard.white-text { background: rgba(255,255,255,0.9); color: var(--accent-color); border: none; }
 
-/* BOTÃO NEON (DESTAQUE MÁXIMO) */
 .btn-neon-large { background: var(--gradient-primary); color: white; border: none; font-weight: 800; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px var(--accent-glow); padding: 16px 30px; border-radius: 20px; font-size: 16px; }
 .btn-neon-large:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
-
-/* BOTOES E INPUTS SECUNDARIOS */
-.glass-input-login, .glass-input-premium { width: 100%; max-width: 100%; padding: 16px 25px; border-radius: 20px; border: 1px solid var(--border-soft); background: rgba(255,255,255,0.8); font-size: 15px; color: var(--text-main); margin-bottom: 15px; transition: 0.3s; font-family: inherit; }
-.glass-input-login:focus, .glass-input-premium:focus { outline: none; border-color: var(--accent-color); background: white; box-shadow: 0 0 0 4px var(--accent-glow); }
-.glass-input-soft { width: 100%; max-width: 100%; padding: 12px 20px; border-radius: 20px; border: 1px solid transparent; background: rgba(0,0,0,0.04); font-size: 14px; transition: 0.2s; color: var(--text-main); }
-.glass-input-soft:focus { border-color: var(--accent-color); outline: none; background: white; }
-.glass-input-light { width: 100%; max-width: 100%; padding: 15px 25px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); font-size: 15px; color: white; transition: 0.3s; }
-.glass-input-light::placeholder { color: rgba(255,255,255,0.6); }
-.glass-input-light:focus { outline: none; border-color: white; background: rgba(255,255,255,0.2); }
-.glass-input-dark { width: 100%; max-width: 100%; padding: 10px 15px; border-radius: 16px; border: none; background: rgba(255,255,255,0.05); color: white; font-size: 13px; }
-.glass-input-dark:focus { outline: none; background: rgba(255,255,255,0.1); }
+.btn-primary-send { background: var(--accent-color); color: white; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px var(--accent-glow); width: 45px; height: 45px; border-radius: 50%; }
+.btn-primary-send:hover { transform: scale(1.05); }
 
 .btn-icon-action { background: transparent; border: none; color: var(--text-muted); display: flex; align-items: center; gap: 5px; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 20px; transition: 0.2s; }
 .btn-icon-action:hover { background: rgba(0,0,0,0.04); }
 .btn-icon-action.active { color: var(--accent-color); background: rgba(139, 92, 246, 0.1); }
-.btn-close-subtle { background: transparent; border: none; color: var(--text-muted); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+.btn-close-subtle { background: transparent; border: none; color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 5px; border-radius: 50%; }
 .btn-close-subtle:hover { background: rgba(0,0,0,0.05); color: var(--text-main); }
+
+/* INPUTS */
+.glass-input-login, .glass-input-premium { width: 100%; padding: 16px 25px; border-radius: 20px; border: 1px solid var(--border-soft); background: rgba(255,255,255,0.8); font-size: 15px; color: var(--text-main); margin-bottom: 15px; transition: 0.3s; font-family: inherit; }
+.glass-input-login:focus, .glass-input-premium:focus { outline: none; border-color: var(--accent-color); background: white; box-shadow: 0 0 0 4px var(--accent-glow); }
+.glass-input-light { width: 100%; padding: 15px 25px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); font-size: 15px; color: white; transition: 0.3s; }
+.glass-input-light::placeholder { color: rgba(255,255,255,0.6); }
+.glass-input-light:focus { outline: none; border-color: white; background: rgba(255,255,255,0.2); }
+.glass-input-dark { width: 100%; padding: 10px 15px; border-radius: 16px; border: none; background: rgba(255,255,255,0.05); color: white; font-size: 13px; }
+.glass-input-dark:focus { outline: none; background: rgba(255,255,255,0.1); }
 
 /* IMAGENS E AVATARES */
 .avatar-img-round { border-radius: 50%; overflow: hidden; background: var(--bg-app); display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--accent-color); flex-shrink: 0; border: 1px solid var(--border-soft); box-shadow: var(--shadow-soft); }
@@ -942,7 +986,7 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .tiny-avatar { width: 28px; height: 28px; font-size: 10px; }
 
 /* LOGIN */
-.login-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #0A0710; padding: 20px; }
+.login-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #0A0710; padding: 20px; }
 .login-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6; animation: float 10s infinite alternate; }
 .orb-1 { width: 400px; height: 400px; background: #8B5CF6; top: -100px; left: -100px; }
 .orb-2 { width: 500px; height: 500px; background: #D946EF; bottom: -150px; right: -100px; animation-delay: -5s; }
@@ -975,17 +1019,17 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 
 /* PALCO CLARO E HEADER FLUTUANTE (TOP NAV) */
 .main-stage { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-app); position: relative; }
-.scroll-area { flex: 1; overflow-y: auto; position: relative; padding-bottom: 30px; }
+.scroll-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; position: relative; padding-bottom: 40px;}
 
 .top-nav-glass { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; z-index: 100; background: transparent; pointer-events: none; }
 .top-nav-left { pointer-events: auto; }
 .top-nav-right { display: flex; flex-direction: row; align-items: center; gap: 15px; pointer-events: auto; }
 
-.partner-status-pill { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); padding: 6px 16px 6px 6px; border-radius: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-soft); }
+.partner-status-pill { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); padding: 6px 16px 6px 6px; border-radius: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-soft); }
 .partner-status-pill .partner-avatar-round { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; border: 2px solid white; box-shadow: var(--shadow-soft); }
 .partner-status-pill .partner-avatar-round img { width: 100%; height: 100%; object-fit: cover; }
 
-.icon-btn-round { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border: 1px solid var(--border-soft); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; position: relative; color: var(--text-main); }
+.icon-btn-round { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border: 1px solid var(--border-soft); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; position: relative; color: var(--text-main); }
 .icon-btn-round:hover { transform: translateY(-2px); box-shadow: var(--shadow-ambient); background: white; }
 .notification-badge { position: absolute; top: -2px; right: -2px; background: #EF4444; color: white; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-surface); }
 .notification-dropdown { position: absolute; top: 55px; right: 0; width: 340px; z-index: 1000; padding: 0; }
@@ -996,42 +1040,42 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .notif-text { font-size: 14px; color: var(--text-main); line-height: 1.4; font-weight: 500; }
 .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-weight: 600; }
 
-.dual-toggle-pill { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); border-radius: 40px; padding: 6px; display: flex; border: 1px solid var(--border-soft); box-shadow: var(--shadow-soft); }
+/* CHAVINHA DE PERFIL NA TOP NAV */
+.dual-toggle-pill { background: rgba(255,255,255,0.9); backdrop-filter: blur(20px); border-radius: 40px; padding: 6px; display: flex; border: 1px solid var(--border-soft); box-shadow: var(--shadow-soft); pointer-events: auto; }
 .dual-toggle-pill button { background: transparent; border: none; color: var(--text-muted); font-weight: 700; padding: 10px 25px; border-radius: 30px; cursor: pointer; transition: 0.3s; font-size: 14px; }
 .dual-toggle-pill button.active { background: white; color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-/* FEED E POSTS (THREADS STYLE) */
-.daily-animated-banner { background: var(--gradient-cosmic); background-size: 300% 300%; animation: cosmicGradient 10s ease infinite; padding: 40px; border-radius: 30px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(43, 10, 61, 0.3); }
-.daily-badge { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(10px); }
-.daily-question-title { font-size: 32px; margin: 0 0 25px 0; color: white; position: relative; z-index: 2; line-height: 1.3; }
-.daily-answer-form { display: flex; gap: 15px; position: relative; z-index: 2; align-items: center; }
-.daily-answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; position: relative; z-index: 2; }
+/* FEED E POSTS (GLASS CARDS ISOLADOS) */
+.daily-animated-banner { background: var(--gradient-cosmic); background-size: 300% 300%; animation: cosmicGradient 10s ease infinite; padding: 40px; border-radius: 30px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(43, 10, 61, 0.3); min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+.daily-badge { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(10px); width: fit-content; }
+.daily-question-title { font-size: 28px; margin: 0 0 25px 0; color: white; position: relative; z-index: 2; line-height: 1.3; }
+.daily-answer-form { display: flex; gap: 15px; position: relative; z-index: 2; align-items: center; flex-wrap: wrap; }
+.daily-answers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; position: relative; z-index: 2; }
 .answer-card { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 24px; backdrop-filter: blur(15px); }
 .answer-card.outline-glass { border: 1px solid rgba(255,255,255,0.2); }
 .answer-label { font-size: 11px; color: rgba(255,255,255,0.6); margin-bottom: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
 .answer-text { font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.9); line-height: 1.6; }
 .answer-text.highlight { color: white; font-weight: 700; }
 
-.feed-container { display: flex; flex-direction: column; gap: 20px; padding-bottom: 20px; }
-.post-glass-card { background: rgba(255,255,255,0.6); backdrop-filter: blur(20px); border-radius: 24px; padding: 25px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+.feed-container { display: flex; flex-direction: column; gap: 20px; }
+.post-glass-card { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); border-radius: 24px; padding: 25px; border: 1px solid var(--border-soft); box-shadow: var(--shadow-soft); }
 .post-layout-flex { display: flex; gap: 15px; align-items: flex-start; }
 .post-avatar-col { flex-shrink: 0; }
 .post-avatar-col .avatar-img-round { width: 48px; height: 48px; }
 .post-content-col { flex: 1; }
-.post-header-line { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.post-header-line { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.03); padding-bottom: 10px; }
 .post-author-name { font-weight: 800; font-size: 16px; color: var(--text-main); }
 .post-time { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-.post-content-text { font-size: 16px; line-height: 1.6; color: var(--text-main); margin-bottom: 15px; white-space: pre-wrap; }
+.post-content-text { font-size: 16px; line-height: 1.6; color: var(--text-main); margin-bottom: 15px; white-space: pre-wrap; margin-top: 10px; }
 .post-image { width: 100%; max-height: 450px; object-fit: cover; border-radius: 20px; margin-bottom: 15px; border: 1px solid var(--border-soft); }
-.post-actions-row { display: flex; gap: 20px; color: var(--text-muted); }
 
-.capsule-locked-box { background: var(--bg-app); padding: 30px; border-radius: 20px; text-align: center; border: 1px dashed var(--border-soft); margin-top: 10px; }
+.capsule-locked-box { background: var(--bg-surface); padding: 30px; border-radius: 20px; text-align: center; border: 1px dashed var(--border-soft); margin-top: 10px; }
 .capsule-title { font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 5px; }
 .capsule-date { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
 .nested-replies-area { margin-top: 15px; padding-left: 20px; border-left: 2px solid var(--border-soft); }
 .reply-flex-item { display: flex; gap: 12px; margin-bottom: 15px; align-items: flex-start; }
-.reply-bubble-content { background: var(--bg-app); padding: 12px 18px; border-radius: 4px 20px 20px 20px; font-size: 15px; flex: 1; border: 1px solid var(--border-soft); line-height: 1.5; }
+.reply-bubble-content { background: var(--bg-surface); padding: 12px 18px; border-radius: 4px 20px 20px 20px; font-size: 14px; flex: 1; border: 1px solid var(--border-soft); line-height: 1.5; }
 .reply-author { font-weight: 800; margin-right: 8px; color: var(--text-main); }
 .reply-input-form { display: flex; gap: 10px; margin-top: 15px; }
 .reply-input { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid var(--border-soft); background: var(--bg-surface); font-size: 14px; font-family: inherit; }
@@ -1044,9 +1088,8 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .composer-textarea { width: 100%; border: none; background: transparent; resize: none; font-size: 16px; color: var(--text-main); font-family: inherit; margin-bottom: 15px; height: 60px; font-weight: 500; }
 .composer-textarea:focus { outline: none; }
 .composer-toolbar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-soft); padding-top: 15px; }
-.capsule-date-picker { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border-soft); display: flex; align-items: center; gap: 15px; }
 
-/* NOSSO MUNDO BENTO GRID E CAPA GIGANTE */
+/* NOSSO MUNDO BENTO GRID E CAPA COLOSSAL */
 .mundo-master-cover { position: relative; height: 400px; width: calc(100% - 40px); margin: 20px auto 40px auto; border-radius: 30px; overflow: hidden; box-shadow: var(--shadow-ambient); }
 .cover-img { width: 100%; height: 100%; object-fit: cover; }
 .cover-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%); pointer-events: none; }
@@ -1054,41 +1097,42 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .cover-overlay h2 { color: white; font-size: 48px; margin: 0; text-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.1; }
 .abs-bottom-right { position: absolute; bottom: 20px; right: 20px; z-index: 2; }
 
+/* GRID DE 3 COLUNAS PERFEITAS */
 .mundo-bento-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; padding: 0 40px 40px 40px; }
+.column-wrapper { display: flex; flex-direction: column; height: 100%; }
+.gap-vertical { gap: 25px; }
+.bento-glass-card { background: rgba(255,255,255,0.7); border-radius: 30px; box-shadow: var(--shadow-ambient); border: 1px solid var(--border-soft); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
 
-/* CARROSSEL NATIVO HORIZONTAL PARA MEMÓRIAS (NOVA ESTÉTICA) */
-.memory-bento-card { padding: 25px; display: flex; flex-direction: column; flex: 1; height: 100%; }
+/* CARROSSEL NATIVO (GALERIA) */
+.memory-bento-card { padding: 0; display: flex; flex-direction: column; height: 500px; }
 .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .card-header-flex h3, .card-header-flex h4 { margin: 0; font-size: 20px; color: var(--text-main); }
-
-.carousel-horizontal { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 15px; padding-bottom: 10px; flex: 1; height: 450px; }
-.carousel-slide { flex: 0 0 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; scroll-snap-align: start; background: var(--bg-app); border: 1px solid var(--border-soft); }
-.carousel-slide img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.gallery-vertical-scroll { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding: 0 25px 25px 25px; }
+.gallery-item-vertical { width: 100%; aspect-ratio: 9/16; border-radius: 20px; overflow: hidden; position: relative; flex-shrink: 0; box-shadow: var(--shadow-soft); }
+.gallery-item-vertical img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 .memory-info-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 25px; display: flex; flex-direction: column; justify-content: flex-end; color: white; }
 .memory-info-overlay .desc { font-weight: 700; font-size: 15px; margin-bottom: 8px; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .memory-info-overlay .meta { font-size: 12px; opacity: 0.8; font-weight: 600; }
-.empty-memory-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: 2px dashed var(--border-soft); border-radius: 20px; gap: 10px; transition: 0.2s; width: 100%; height: 100%; }
-.empty-memory-slot:hover { background: rgba(0,0,0,0.02); color: var(--text-main); border-color: var(--accent-color); }
+.empty-memory-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: 2px dashed var(--border-soft); border-radius: 20px; gap: 10px; transition: 0.2s; width: 100%; height: 100%; min-height: 300px; }
 
-.history-bento-card { padding: 30px; display: flex; flex-direction: column; }
+/* HISTORIA E SONHOS (VERTICAL) */
+.history-bento-card { display: flex; flex-direction: column; height: 500px; }
 .timeline-row-vertical { display: flex; flex-direction: column; gap: 15px; }
-.timeline-item { background: rgba(255,255,255,0.5); padding: 15px 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-soft); }
+.timeline-item { background: rgba(255,255,255,0.6); padding: 15px 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-soft); }
 .timeline-item .label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .timeline-item .value { font-size: 16px; font-weight: 800; color: var(--text-main); }
 .timeline-item .text-accent { color: var(--accent-color); }
 .divider-line { height: 1px; background: var(--border-soft); margin: 25px 0; }
 .btn-circle-mini { background: var(--text-main); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
 .btn-circle-mini:hover { transform: scale(1.1); background: var(--accent-color); }
-.dream-item { background: rgba(255,255,255,0.5); padding: 12px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; color: var(--text-main); margin-bottom: 10px; border: 1px solid var(--border-soft); }
+.dream-item { background: rgba(255,255,255,0.6); padding: 12px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; color: var(--text-main); margin-bottom: 10px; border: 1px solid var(--border-soft); }
 .empty-list-text { color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px; font-weight: 500; }
 
-.bento-col-vertical { display: flex; flex-direction: column; gap: 25px; }
-.spotify-bento-card { padding: 30px; display: flex; flex-direction: column; }
+/* SPOTIFY E ROLETA (COLUNA 3) */
+.spotify-bento-card { display: flex; flex-direction: column; }
 .spotify-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
 .empty-spotify-slot { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: 2px dashed var(--border-soft); border-radius: 20px; width: 100%; transition: 0.2s; background: rgba(255,255,255,0.5); }
-.empty-spotify-slot:hover { background: rgba(0,0,0,0.02); color: var(--text-main); border-color: var(--accent-color); }
 
-/* ROLETA WIDGET INJETADA NO MUNDO */
 .roleta-bento-card { padding: 40px 30px; text-align: center; position: relative; overflow: hidden; flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .roleta-inner { display: flex; flex-direction: column; align-items: center; gap: 15px; position: relative; z-index: 2; }
 .icon-pulse-wrapper { background: var(--gradient-primary); width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px var(--accent-glow); margin-bottom: 10px; position: relative; }
@@ -1098,9 +1142,8 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .loading-state-tiny { display: flex; align-items: center; gap: 10px; font-weight: bold; color: var(--accent-color); margin-bottom: 15px; }
 .result-tiny { background: var(--bg-surface); padding: 15px; border-radius: 16px; font-weight: 800; color: var(--text-main); font-size: 18px; width: 100%; border: 1px solid var(--border-soft); margin-bottom: 15px; box-shadow: var(--shadow-soft); }
 
-/* PERFIL DUPLO V4 (ESTILO APPLE) */
-.profile-hero-expanded { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
-
+/* PERFIL DUPLO V4 (ALINHAMENTO TOP) */
+.profile-hero-expanded { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 0; }
 .hero-info-wrapper { max-width: 1000px; width: 100%; display: flex; align-items: flex-end; gap: 30px; padding: 0 40px; margin-top: -70px; position: relative; z-index: 2; flex-wrap: wrap; }
 .hero-avatar-box { position: relative; width: 150px; height: 150px; border-radius: 50%; border: 8px solid var(--bg-app); background: white; display: flex; justify-content: center; align-items: center; font-size: 48px; font-weight: bold; color: var(--accent-color); box-shadow: var(--shadow-soft); overflow: hidden; flex-shrink: 0; }
 .hero-avatar-box img { width: 100%; height: 100%; object-fit: cover; }
@@ -1113,7 +1156,6 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .bio-edit-box { width: 100%; max-width: 500px; }
 .bio-text { font-size: 16px; color: var(--text-main); line-height: 1.6; max-width: 500px; margin-top: 15px; }
 
-/* DROPDOWN DE HUMOR (MOOD PILL) */
 .mood-dropdown-wrapper { position: relative; }
 .btn-mood-pill { background: var(--bg-surface); border: 1px solid var(--border-soft); padding: 8px 16px; border-radius: 30px; font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; height: 36px; }
 .btn-mood-pill:hover { transform: translateY(-2px); box-shadow: var(--shadow-ambient); }
@@ -1126,23 +1168,20 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .profile-tabs button:hover { color: var(--text-main); }
 .profile-tabs button.active { color: var(--text-main); }
 .profile-tabs button.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 4px; background: var(--text-main); border-radius: 4px 4px 0 0; }
-.profile-tab-content { width: 100%; max-width: 1000px; padding: 0 40px 50px 40px; }
-.composer-mural { padding: 20px; }
+.profile-tab-content { width: 100%; max-width: 1000px; padding: 0 40px 50px 40px; margin: 0 auto;}
 
 /* MODALS ABSOLUTOS */
 .modal-overlay-blur { position: fixed; inset: 0; background: rgba(12, 10, 21, 0.7); backdrop-filter: blur(15px); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-content-glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.5); padding: 40px; border-radius: 40px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
 .modal-icon-circle { background: rgba(244, 63, 94, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
-.btn-outline-cancel { flex: 1; padding: 15px; border-radius: 20px; background: transparent; border: 1px solid var(--border-soft); color: var(--text-main); cursor: pointer; font-weight: 800; font-size: 15px; transition: 0.2s; }
-.btn-outline-cancel:hover { background: rgba(0,0,0,0.03); }
 .input-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; }
 
-/* CHAT WHATSAPP STYLE (RAIZ ABSOLUTA) */
+/* CHAT WHATSAPP STYLE (RAIZ ABSOLUTA BLINDADA) */
 .chat-widget-absolute { position: fixed; bottom: 30px; right: 30px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; pointer-events: none; }
 .chat-trigger-btn { width: 65px; height: 65px; border-radius: 50%; background: var(--gradient-primary); border: none; box-shadow: 0 10px 30px var(--accent-glow); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: auto; }
 .chat-trigger-btn:hover { transform: scale(1.1); }
 .chat-window-panel { width: 380px; height: 550px; background: rgba(255,255,255,0.95); border: 1px solid rgba(255,255,255,0.5); border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease-out; pointer-events: auto; }
-.chat-header-blur { background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border-soft); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(20px); z-index: 2; }
+.chat-header-blur { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border-soft); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(20px); z-index: 2; }
 .chat-header-info { display: flex; align-items: center; gap: 12px; }
 .chat-header-text { display: flex; flex-direction: column; }
 .chat-header-text .name { font-weight: 800; font-size: 16px; color: var(--text-main); }
@@ -1155,14 +1194,13 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .chat-bubble-row.is-mine .chat-bubble { background: var(--gradient-primary); color: white; border-radius: 20px 20px 4px 20px; }
 .chat-bubble .time { font-size: 10px; margin-top: 5px; font-weight: 700; opacity: 0.7; text-align: right; }
 .chat-input-bar { padding: 15px; background: white; border-top: 1px solid var(--border-soft); display: flex; gap: 10px; align-items: center; z-index: 2; }
-.chat-input { flex: 1; padding: 12px 20px; border-radius: 30px; border: none; background: var(--bg-app); font-size: 15px; font-family: inherit; color: var(--text-main); transition: 0.2s; }
+.chat-input { flex: 1; padding: 12px 20px; border-radius: 30px; border: none; background: var(--bg-app); font-size: 15px; font-family: inherit; color: var(--text-main); transition: 0.2s; width: 100%; }
 .chat-input:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-glow); }
 
 /* RESPONSIVIDADE MOBILE ABSOLUTA */
-.mobile-header { display: none; background: var(--bg-sidebar); padding: 15px 20px; justify-content: space-between; align-items: center; z-index: 1001; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.mobile-menu-btn { background: transparent; border: none; cursor: pointer; padding: 5px; }
+.hide-on-desktop { display: none; }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .mundo-bento-grid-3 { grid-template-columns: 1fr 1fr; }
 }
 
@@ -1170,13 +1208,16 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
   .hero-info-wrapper { align-items: center; text-align: center; flex-direction: column; margin-top: -50px; }
   .name-row { flex-direction: column; gap: 10px; }
   .profile-tabs { justify-content: center; }
-  .dual-toggle-pill { margin-bottom: 10px; }
   .mundo-bento-grid-3 { grid-template-columns: 1fr; }
+  .memory-bento-card { height: auto; }
+  .history-bento-card { height: auto; }
 }
 
 @media (max-width: 800px) {
   .app-master-layout { flex-direction: column; }
-  .mobile-header { display: flex; }
+  .hide-on-desktop { display: flex; background: var(--bg-sidebar); padding: 15px 20px; justify-content: space-between; align-items: center; z-index: 1001; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .mobile-menu-btn { background: transparent; border: none; cursor: pointer; padding: 5px; }
+  
   .desktop-sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); padding-top: 80px; }
   .app-master-layout.mobile-menu-open .desktop-sidebar { transform: translateX(0); }
   .desktop-only { display: none !important; }
@@ -1184,10 +1225,9 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
   .main-stage { padding: 0; }
   .pad-responsive { padding: 0 20px; }
   .pad-top-nav { padding-top: 20px !important; }
-  .mundo-master-cover { width: 100%; border-radius: 0; margin: 0 0 20px 0; height: 250px;}
+  
+  .mundo-master-cover { width: calc(100% - 40px); border-radius: 20px; margin: 20px auto; height: 250px;}
   .mundo-bento-grid-3 { padding: 0 20px 40px 20px; }
-  .hero-cover-wrapper { width: 100%; border-radius: 0; height: 250px; margin: 0; }
-  .hero-info-wrapper { padding: 0 20px; }
   
   .chat-widget-absolute { bottom: 20px; right: 20px; z-index: 999999; }
   .chat-window-panel { width: calc(100vw - 40px); height: calc(100vh - 100px); position: fixed; bottom: 0; left: 0; border-radius: 30px 30px 0 0; width: 100%; border: none; }
