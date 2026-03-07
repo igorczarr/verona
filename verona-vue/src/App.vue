@@ -588,7 +588,7 @@ import {
   BatteryWarning, Wine, Shield, Smile, ChevronDown
 } from 'lucide-vue-next'; 
 
-const URL_API = 'http://localhost:3000'; // Substitua na Vercel pelo Render
+const URL_API = 'https://verona-api.onrender.com'; // Substitua na Vercel pelo Render
 let socket = null;
 
 const usuarioLogado = ref(null);
