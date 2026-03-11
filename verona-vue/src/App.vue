@@ -159,13 +159,13 @@
              
              <div class="dual-toggle-pill glass-card" v-if="abaAtiva === 'nossos-perfis'">
                 <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">{{ usuarioLogado?.name }}</button>
-                <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro?.name }}</button>
+                <button @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro?.name || 'Aguardando...' }}</button>
              </div>
 
-             <div v-if="parceiro" class="partner-status-pill">
-                <div class="partner-avatar-round cursor-pointer" @click="irParaPerfil(parceiro.id)">
+             <div class="partner-status-pill">
+                <div class="partner-avatar-round cursor-pointer" @click="parceiro ? irParaPerfil(parceiro.id) : null">
                    <img v-if="parceiro?.avatarUrl" :src="parceiro.avatarUrl" />
-                   <template v-else>{{ getInicial(parceiro?.name) }}</template>
+                   <template v-else>{{ getInicial(parceiro?.name || '?') }}</template>
                 </div>
                 <div class="partner-mood-icon" :title="'Humor atual: ' + (obterLabelHumor(parceiro?.moodStatus) || 'Normal')">
                    <component :is="obterIconeLucide(parceiro?.moodStatus)" :size="18" :color="obterCorHumor(parceiro?.moodStatus)" />
@@ -446,7 +446,7 @@
                    
                    <div class="hero-text-content">
                       <div class="name-row">
-                         <h2 class="playfair">{{ perfilDados?.name || 'Carregando...' }}</h2>
+                         <h2 class="playfair">{{ perfilDados?.name || 'Aguardando...' }}</h2>
                          
                          <div class="mood-dropdown-wrapper">
                             <button class="btn-mood-pill" @click="perfilVisivel === 'me' ? mostrarMenuHumor = !mostrarMenuHumor : null" :disabled="perfilVisivel !== 'me'">
@@ -601,7 +601,7 @@ import {
   BatteryWarning, Wine, Shield, Smile, ChevronDown, Music, MoreVertical, Trash2 
 } from 'lucide-vue-next'; 
 
-const URL_API = 'https://verona-api.onrender.com'; // Mantenha sua URL do Render
+const URL_API = 'https://verona-api.onrender.com'; // Servidor Oficial
 let socket = null;
 
 const usuarioLogado = ref(null);
@@ -861,7 +861,7 @@ const fazerLogin = async () => {
     senha.value = ''; 
     abaAtiva.value = 'feed'; 
   } catch (err) { 
-    alert(err.response?.data?.error || 'Erro de conexão com o servidor. Verifique suas credenciais.'); 
+    alert(err.response?.data?.error || 'Erro de conexão com o servidor.'); 
   } finally {
     isAuthLoading.value = false;
   }
