@@ -159,7 +159,7 @@
              
              <div class="dual-toggle-pill glass-card" v-if="abaAtiva === 'nossos-perfis'">
                 <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">{{ usuarioLogado?.name }}</button>
-                <button @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro?.name || 'Aguardando...' }}</button>
+                <button @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro?.name || 'Seu Amor' }}</button>
              </div>
 
              <div class="partner-status-pill">
@@ -446,7 +446,7 @@
                    
                    <div class="hero-text-content">
                       <div class="name-row">
-                         <h2 class="playfair">{{ perfilDados?.name || 'Aguardando...' }}</h2>
+                         <h2 class="playfair">{{ perfilDados?.name }}</h2>
                          
                          <div class="mood-dropdown-wrapper">
                             <button class="btn-mood-pill" @click="perfilVisivel === 'me' ? mostrarMenuHumor = !mostrarMenuHumor : null" :disabled="perfilVisivel !== 'me'">
@@ -462,7 +462,7 @@
                          </div>
                       </div>
                       
-                      <span class="username-tag">@{{ perfilDados?.username || 'usuario' }}</span>
+                      <span class="username-tag">@{{ perfilDados?.username }}</span>
                       
                       <div v-if="perfilVisivel === 'me' && editandoBio" class="bio-edit-box mt-2">
                          <textarea class="glass-input-premium" v-model="novaBio" placeholder="Escreva algo sobre você..." style="height: 80px; padding: 15px; font-size: 14px; width: 100%;"></textarea>
@@ -479,7 +479,6 @@
                 </div>
                 
                 <div class="profile-tab-content pad-responsive">
-                   
                    <div v-if="perfilAbaAtiva === 'mural'" class="mural-layout-inverted">
                       
                       <div v-if="perfilVisivel === 'me'" class="glass-panel composer-fixo" style="padding: 20px; border-radius: 24px; margin-bottom: 30px;">
@@ -511,8 +510,13 @@
                          </div>
                       </div>
                    </div>
-
                 </div>
+             </div>
+
+             <div v-else class="empty-state-box" style="margin-top: 100px;">
+                 <Heart :size="48" color="var(--accent-color)" style="margin-bottom: 20px; opacity: 0.5" />
+                 <h3 class="playfair">Aguardando seu amor</h3>
+                 <p>O perfil e as informações do seu parceiro estarão disponíveis assim que ele entrar no Verona usando o seu convite.</p>
              </div>
           </div>
         </template>
@@ -554,13 +558,13 @@
             <div class="chat-header-info cursor-pointer" @click="parceiro ? irParaPerfil(parceiro.id) : null">
                <div class="avatar-img-round" style="width: 40px; height: 40px; border:none; box-shadow:none;">
                  <img v-if="parceiro?.avatarUrl" :src="parceiro.avatarUrl" />
-                 <template v-else>{{ getInicial(parceiro?.name) }}</template>
+                 <template v-else>{{ getInicial(parceiro?.name || '?') }}</template>
                </div>
                <div class="chat-header-text">
                  <span class="name">{{ parceiro?.name || 'Aguardando Parceiro...' }}</span>
-                 <span class="status" v-if="parceiro">
+                 <span class="status">
                     <component :is="obterIconeLucide(parceiro?.moodStatus)" :size="10" :color="obterCorHumor(parceiro?.moodStatus)" style="margin-right: 4px;" />
-                    {{ obterLabelHumor(parceiro?.moodStatus) || 'Online' }}
+                    {{ parceiro ? (obterLabelHumor(parceiro?.moodStatus) || 'Online') : 'Conectando...' }}
                  </span>
                </div>
             </div>
@@ -571,7 +575,7 @@
              <div v-for="(msg, idx) in mensagensChat" :key="idx" class="chat-bubble-row" :class="{'is-mine': msg.authorId === usuarioLogado?.id}">
                <div v-if="msg.authorId !== usuarioLogado?.id" class="avatar-img-round tiny-avatar cursor-pointer" @click="irParaPerfil(msg.authorId)" style="border:none;">
                  <img v-if="msg.authorAvatarUrl" :src="msg.authorAvatarUrl" />
-                 <template v-else>{{ getInicial(msg.authorName) }}</template>
+                 <template v-else>{{ getInicial(msg.authorName || '?') }}</template>
                </div>
                <div class="chat-bubble">
                  <div class="text">{{ msg.texto }}</div>
@@ -652,7 +656,7 @@ const mostrarMenuHumor = ref(false);
 
 const perfilDados = computed(() => {
   if (perfilVisivel.value === 'me') return usuarioLogado.value;
-  return parceiro.value;
+  return parceiro.value || null;
 });
 
 const canais = ref([]);
@@ -732,6 +736,19 @@ const deletarCanal = async (canal) => {
   }
 };
 
+// O RADAR DE PARCEIRO: Impede que o app fique 'preso' sem carregar a pessoa
+let radarInterval = null;
+const verificarParceiro = async () => {
+  if (parceiro.value) return; // Se já achou, não faz mais nada
+  try {
+    const res = await axios.get(`${URL_API}/auth/me`);
+    if (res.data.partner) {
+      parceiro.value = res.data.partner;
+      if (radarInterval) { clearInterval(radarInterval); radarInterval = null; }
+    }
+  } catch(e) {}
+};
+
 onMounted(async () => {
   document.title = "Verona"; 
   const tokenSalvo = localStorage.getItem('verona_token');
@@ -744,6 +761,9 @@ onMounted(async () => {
       novaBio.value = usuarioLogado.value?.bio || '';
       spotifyTemp.value = usuarioLogado.value?.relationship?.spotifyUri || '';
       abaAtiva.value = 'feed'; 
+      
+      // Se estiver logado e não tiver parceiro, liga o radar
+      if (!parceiro.value) { radarInterval = setInterval(verificarParceiro, 5000); }
     } catch (e) { localStorage.removeItem('verona_token'); }
   }
 });
@@ -758,11 +778,17 @@ watch(() => usuarioLogado.value, (user) => {
     if(!socket) {
       socket = io(URL_API, { transports: ['websocket', 'polling'] }); 
       socket.emit('entrar_na_sala', user.relationship.id);
-      socket.on('receber_mensagem', (msg) => mensagensChat.value.push(msg));
+      
+      socket.on('receber_mensagem', (msg) => {
+         mensagensChat.value.push(msg);
+         if (!parceiro.value) verificarParceiro(); // Atualiza instantaneamente se o parceiro mandar mensagem
+      });
+      
       socket.on('feed_atualizado', (dados) => {
         if (canalAtivo.value && canalAtivo.value.id === dados.channelId) {
           carregarFeed(); 
         }
+        if (!parceiro.value) verificarParceiro(); // Atualiza instantaneamente se o parceiro postar algo
       });
     }
   }
@@ -860,8 +886,11 @@ const fazerLogin = async () => {
     parceiro.value = res.data.partner; 
     senha.value = ''; 
     abaAtiva.value = 'feed'; 
+    
+    // Liga o radar após o login se o parceiro ainda não existir
+    if (!parceiro.value) { radarInterval = setInterval(verificarParceiro, 5000); }
   } catch (err) { 
-    alert(err.response?.data?.error || 'Erro de conexão com o servidor.'); 
+    alert(err.response?.data?.error || 'Erro de conexão com o servidor. Verifique suas credenciais.'); 
   } finally {
     isAuthLoading.value = false;
   }
@@ -881,7 +910,14 @@ const fazerCadastro = async () => {
   }
 };
 
-const fazerLogout = () => { usuarioLogado.value = null; parceiro.value = null; localStorage.removeItem('verona_token'); delete axios.defaults.headers.common['Authorization']; if (socket) { socket.disconnect(); socket = null; } };
+const fazerLogout = () => { 
+  if (radarInterval) { clearInterval(radarInterval); radarInterval = null; }
+  usuarioLogado.value = null; 
+  parceiro.value = null; 
+  localStorage.removeItem('verona_token'); 
+  delete axios.defaults.headers.common['Authorization']; 
+  if (socket) { socket.disconnect(); socket = null; } 
+};
 const copiarCodigo = () => { navigator.clipboard.writeText(usuarioLogado.value?.relationship?.inviteCode); alert('Código copiado!'); };
 
 const carregarCanais = async () => { 
@@ -922,7 +958,10 @@ const formatarData = (dataIso) => { if (!dataIso) return ''; return new Date(dat
 const formatarHora = (ts) => ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' }) : '';
 const getInicial = (nomeStr) => nomeStr ? nomeStr.charAt(0).toUpperCase() : 'V';
 
-onUnmounted(() => { if (socket) socket.disconnect(); });
+onUnmounted(() => { 
+  if (socket) socket.disconnect(); 
+  if (radarInterval) clearInterval(radarInterval);
+});
 </script>
 
 <style>
@@ -1187,7 +1226,7 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .bio-edit-box { width: 100%; max-width: 500px; }
 .bio-text { font-size: 16px; color: var(--text-main); line-height: 1.6; max-width: 500px; margin-top: 15px; }
 
-/* CSS do Botão Mood Otimizado (Ponto 9) */
+/* CSS do Botão Mood Otimizado */
 .mood-dropdown-wrapper { position: relative; }
 .btn-mood-pill { background: var(--bg-surface); border: 1px solid var(--border-soft); padding: 8px 18px; border-radius: 30px; font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; height: 38px; max-width: 200px; }
 .btn-mood-pill .mood-label-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; display: inline-block; }
@@ -1204,7 +1243,7 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .profile-tabs button.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 4px; background: var(--text-main); border-radius: 4px 4px 0 0; }
 .profile-tab-content { width: 100%; max-width: 1000px; padding: 0 40px 50px 40px; margin: 0 auto;}
 
-/* Mural Invertido (Ponto 8 e 10) */
+/* Mural Invertido */
 .mural-layout-inverted { display: flex; flex-direction: column; }
 .mural-posts-lista { display: flex; flex-direction: column; }
 
