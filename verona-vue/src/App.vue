@@ -1,10 +1,6 @@
-<!-- src/App.vue -->
 <template>
   <div data-theme="premium-glass" class="app-master-wrapper">
     
-    <!-- ========================================== -->
-    <!-- TELA DE LOGIN (PERFEITAMENTE ALINHADA)     -->
-    <!-- ========================================== -->
     <div v-if="!usuarioLogado" class="login-wrapper">
       <div class="login-orb orb-1"></div>
       <div class="login-orb orb-2"></div>
@@ -16,7 +12,7 @@
         <h1 class="playfair login-title">Verona</h1>
         <p class="login-subtitle">Onde o nosso amor é imortal.</p>
         
-        <form @submit.prevent="modoAuth === 'login' ? fazerLogin() : fazerCadastro()" class="login-form">
+        <form @submit.prevent="modoAuth === 'login' ? fazerLogin() : fazerCadastro()" style="width: 100%;">
           <template v-if="modoAuth === 'register'">
             <input type="text" class="glass-input-premium" placeholder="Como quer ser chamado?" v-model="nome" required />
             <input type="text" class="glass-input-premium" placeholder="@usuario" v-model="username" required />
@@ -33,8 +29,13 @@
             <input v-if="!codigoConvite" type="text" class="glass-input-premium" placeholder="Licença de Acesso (VRN-...)" v-model="licenseKey" />
           </template>
 
-          <button type="submit" class="btn-neon-large" style="width: 100%; margin-top: 15px;">
-            {{ modoAuth === 'login' ? 'Acessar Santuário' : 'Criar Nosso Cofre' }}
+          <button type="submit" class="btn-neon-large" style="width: 100%; margin-top: 15px; padding: 18px; font-size: 16px;" :disabled="isAuthLoading">
+            <template v-if="isAuthLoading">
+              <Loader2 class="spin" :size="20" style="margin-right: 10px;" /> Conectando...
+            </template>
+            <template v-else>
+              {{ modoAuth === 'login' ? 'Acessar Santuário' : 'Criar Nosso Cofre' }}
+            </template>
           </button>
         </form>
         
@@ -44,23 +45,18 @@
       </div>
     </div>
 
-    <!-- AGUARDANDO PARCEIRO -->
-    <div v-else-if="usuarioLogado.relationship.status === 'PENDING'" class="login-wrapper">
+    <div v-else-if="usuarioLogado?.relationship?.status === 'PENDING'" class="login-wrapper">
        <div class="glass-login-panel text-center">
           <Heart :size="60" color="var(--accent-color)" style="margin-bottom: 20px" class="float-anim" />
           <h2 class="playfair login-title" style="margin-bottom: 10px;">Falta pouco!</h2>
           <p style="color: rgba(255,255,255,0.7);">Envie este código para o seu amor usar no cadastro:</p>
-          <h3 class="invite-code-box">{{ usuarioLogado.relationship.inviteCode }}</h3>
+          <h3 class="invite-code-box">{{ usuarioLogado?.relationship?.inviteCode }}</h3>
           <button class="btn-glass-standard" style="width: 100%; padding: 18px;" @click="copiarCodigo">Copiar Código</button>
        </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SISTEMA PRINCIPAL                          -->
-    <!-- ========================================== -->
     <div v-else class="app-master-layout" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
       
-      <!-- HEADER EXCLUSIVO MOBILE (Só aparece em telas pequenas) -->
       <div class="mobile-header hide-on-desktop">
         <div style="display: flex; align-items: center; gap: 10px;">
           <Sparkles :size="24" color="var(--accent-color)" /> 
@@ -72,23 +68,21 @@
         </button>
       </div>
 
-      <!-- SIDEBAR ESCURA (MENU LATERAL) -->
       <aside class="desktop-sidebar" :class="{ collapsed: sidebarCollapsed }">
         <div class="sidebar-brand-area">
-          <div class="workspace-brand cursor-pointer" @click="irParaPerfil(usuarioLogado.id)" v-show="!sidebarCollapsed">
+          <div class="workspace-brand cursor-pointer" @click="irParaPerfil(usuarioLogado?.id)" v-show="!sidebarCollapsed">
             <div class="sidebar-avatar">
-              <img v-if="usuarioLogado.avatarUrl" :src="usuarioLogado.avatarUrl" />
-              <template v-else>{{ getInicial(usuarioLogado.name) }}</template>
+              <img v-if="usuarioLogado?.avatarUrl" :src="usuarioLogado.avatarUrl" />
+              <template v-else>{{ getInicial(usuarioLogado?.name) }}</template>
             </div>
             <div style="display: flex; flex-direction: column; overflow: hidden;">
               <span style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Logado como</span>
-              <span class="playfair" style="font-size: 18px; color: white; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ usuarioLogado.name }}</span>
+              <span class="playfair" style="font-size: 18px; color: white; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ usuarioLogado?.name }}</span>
             </div>
           </div>
-          <!-- Avatar Visível quando retraído -->
-          <div class="sidebar-avatar cursor-pointer" @click="irParaPerfil(usuarioLogado.id)" v-show="sidebarCollapsed" style="margin-bottom: 30px;">
-              <img v-if="usuarioLogado.avatarUrl" :src="usuarioLogado.avatarUrl" />
-              <template v-else>{{ getInicial(usuarioLogado.name) }}</template>
+          <div class="sidebar-avatar cursor-pointer" @click="irParaPerfil(usuarioLogado?.id)" v-show="sidebarCollapsed" style="margin-bottom: 30px;">
+              <img v-if="usuarioLogado?.avatarUrl" :src="usuarioLogado.avatarUrl" />
+              <template v-else>{{ getInicial(usuarioLogado?.name) }}</template>
           </div>
 
           <button class="toggle-btn desktop-only" @click="sidebarCollapsed = !sidebarCollapsed">
@@ -105,10 +99,23 @@
           <form v-if="modoCriarCanal && !sidebarCollapsed" @submit.prevent="criarCanal" style="margin-bottom: 15px; width: 100%;">
              <input type="text" class="glass-input-dark" placeholder="Ex: viagens" v-model="novoCanalNome" autoFocus />
           </form>
+          
           <div class="scroll-channels hide-scrollbar">
-            <div v-for="canal in canais" :key="canal.id" class="nav-item" :class="{ active: canalAtivo?.id === canal.id && abaAtiva === 'feed' }" @click="mudarCanal(canal)">
-              <Hash :size="18" style="opacity: 0.6;" />
-              <span class="nav-text" v-show="!sidebarCollapsed">{{ canal.name }}</span>
+            <div v-for="canal in canais" :key="canal.id" class="nav-item channel-item-row" :class="{ active: canalAtivo?.id === canal.id && abaAtiva === 'feed' }" @click="mudarCanal(canal)">
+              <div style="display:flex; align-items:center; gap: 12px; flex: 1; overflow: hidden;">
+                <Hash :size="18" :style="{ opacity: canal.isSystem ? '0.9' : '0.6', color: canal.isSystem ? 'var(--accent-color)' : 'inherit' }" style="flex-shrink: 0;" />
+                <span class="nav-text" v-show="!sidebarCollapsed" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ canal?.name }}</span>
+              </div>
+              
+              <div v-show="!sidebarCollapsed" class="channel-options-btn" @click.stop="abrirMenuCanal(canal.id)">
+                <MoreVertical :size="14" />
+              </div>
+              
+              <div v-if="menuCanalAberto === canal.id" class="channel-dropdown glass-panel" @click.stop>
+                 <button @click.stop="deletarCanal(canal)" class="dropdown-item text-danger" :disabled="canal.isSystem">
+                   <Trash2 :size="14" /> Excluir
+                 </button>
+              </div>
             </div>
           </div>
         </div>
@@ -127,7 +134,7 @@
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 15px; align-items: center;">
            <div class="streak-box" v-show="!sidebarCollapsed" style="width: 100%;">
-              🔥 {{ usuarioLogado.relationship.streakCount }} Dias Juntos
+              🔥 {{ usuarioLogado?.relationship?.streakCount || 0 }} Dias Juntos
            </div>
            <button @click="abrirModalSaudade" class="btn-glass-standard" style="width: 100%; padding: 14px; border: 1px solid rgba(255,255,255,0.2);">
              <Flame :size="18" color="#F43F5E"/> <span v-show="!sidebarCollapsed">Pensando em você</span>
@@ -139,47 +146,38 @@
         </div>
       </aside>
 
-      <!-- PALCO PRINCIPAL (ÁREA DE NAVEGAÇÃO CLARA) -->
-      <main class="main-stage">
+      <main class="main-stage" @click="menuCanalAberto = null">
         
-        <!-- HEADER FLUTUANTE (TOP NAV) -->
         <header class="top-nav-glass">
           <div class="top-nav-left">
              <h2 class="stage-title playfair" v-if="abaAtiva === 'feed' && canalAtivo">
-               <span style="color: var(--accent-color)">#</span> {{ canalAtivo.name }}
+               <span style="color: var(--accent-color)">#</span> {{ canalAtivo?.name }}
              </h2>
-             <h2 class="stage-title playfair" v-else-if="abaAtiva !== 'nosso-perfil' && abaAtiva !== 'nossos-perfis'">
-               {{ usuarioLogado.relationship.name }}
-             </h2>
-             <div v-else></div> <!-- Deixa vazio para "Nosso Mundo" pois a capa tem o nome -->
           </div>
           
           <div class="top-nav-right">
              
-             <!-- A CHAVINHA DE PERFIL AGORA MORA AQUI (PERFEITAMENTE ALINHADA) -->
              <div class="dual-toggle-pill glass-card" v-if="abaAtiva === 'nossos-perfis'">
-                <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">Eu</button>
-                <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro.name }}</button>
+                <button @click="perfilVisivel = 'me'" :class="{'active': perfilVisivel === 'me'}">{{ usuarioLogado?.name }}</button>
+                <button v-if="parceiro" @click="perfilVisivel = 'partner'" :class="{'active': perfilVisivel === 'partner'}">{{ parceiro?.name }}</button>
              </div>
 
-             <!-- STATUS DO PARCEIRO REDONDO -->
              <div v-if="parceiro" class="partner-status-pill">
                 <div class="partner-avatar-round cursor-pointer" @click="irParaPerfil(parceiro.id)">
-                   <img v-if="parceiro.avatarUrl" :src="parceiro.avatarUrl" />
-                   <template v-else>{{ getInicial(parceiro.name) }}</template>
+                   <img v-if="parceiro?.avatarUrl" :src="parceiro.avatarUrl" />
+                   <template v-else>{{ getInicial(parceiro?.name) }}</template>
                 </div>
-                <div class="partner-mood-icon" :title="'Humor do amor: ' + (obterLabelHumor(parceiro.moodStatus) || 'Normal')">
-                   <component :is="obterIconeLucide(parceiro.moodStatus)" :size="16" :color="obterCorHumor(parceiro.moodStatus)" />
+                <div class="partner-mood-icon" :title="'Humor atual: ' + (obterLabelHumor(parceiro?.moodStatus) || 'Normal')">
+                   <component :is="obterIconeLucide(parceiro?.moodStatus)" :size="18" :color="obterCorHumor(parceiro?.moodStatus)" />
                 </div>
              </div>
 
-             <!-- NOTIFICAÇÕES -->
              <div class="notification-wrapper">
-                <button @click="toggleNotificacoes" class="icon-btn-round">
+                <button @click.stop="toggleNotificacoes" class="icon-btn-round">
                    <Bell :size="18" />
                    <span v-if="naoLidasCount > 0" class="notification-badge">{{ naoLidasCount }}</span>
                 </button>
-                <div v-if="dropdownNotificacoes" class="notification-dropdown glass-card">
+                <div v-if="dropdownNotificacoes" class="notification-dropdown glass-card" @click.stop>
                    <div class="notif-header">Ações Recentes</div>
                    <div class="scroll-area hide-scrollbar" style="max-height: 350px;">
                       <div v-for="n in notificacoes" :key="n.id" class="notif-item" :class="{ 'unread': !n.isRead }">
@@ -194,34 +192,30 @@
                 </div>
              </div>
 
-             <!-- CONFIGURAÇÕES -->
              <button class="icon-btn-round" @click="modalConfigAberto = true"><Settings :size="18" /></button>
           </div>
         </header>
 
-        <!-- ========================================== -->
-        <!-- ABA FEED / CANAIS (COM SCROLL BLINDADO)    -->
-        <!-- ========================================== -->
         <template v-if="abaAtiva === 'feed'">
           <div class="scroll-area pad-top-nav pad-responsive">
             
             <div v-if="dailyQuestion && canalAtivo?.name === 'geral'" class="daily-animated-banner">
-               <div class="daily-badge"><Lock :size="12" v-if="dailyQuestion.partnerAnswer === 'LOCKED'"/><Unlock :size="12" v-else/> Reflexão do Dia</div>
-               <h3 class="playfair daily-question-title">{{ dailyQuestion.text }}</h3>
+               <div class="daily-badge"><Lock :size="12" v-if="dailyQuestion?.partnerAnswer === 'LOCKED'"/><Unlock :size="12" v-else/> O Oráculo Pergunta</div>
+               <h3 class="playfair daily-question-title">{{ dailyQuestion?.text }}</h3>
                
-               <div v-if="!dailyQuestion.myAnswer" class="daily-answer-form">
+               <div v-if="!dailyQuestion?.myAnswer" class="daily-answer-form">
                  <input type="text" class="glass-input-light" placeholder="Sua resposta sincera..." v-model="minhaRespostaDaily" @keydown.enter.prevent="responderDaily" />
                  <button class="btn-glass-standard white-text" style="padding: 15px 30px; font-weight: 800;" @click="responderDaily">Responder</button>
                </div>
                <div v-else class="daily-answers-grid">
                  <div class="answer-card">
-                   <div class="answer-label">Você</div>
-                   <div class="answer-text">{{ dailyQuestion.myAnswer }}</div>
+                   <div class="answer-label">{{ usuarioLogado?.name }}</div>
+                   <div class="answer-text">{{ dailyQuestion?.myAnswer }}</div>
                  </div>
                  <div class="answer-card outline-glass">
-                   <div class="answer-label">Seu Amor</div>
-                   <div v-if="dailyQuestion.partnerAnswer === 'LOCKED'" class="answer-locked"><Clock :size="14"/> Aguardando...</div>
-                   <div v-else class="answer-text highlight">{{ dailyQuestion.partnerAnswer }}</div>
+                   <div class="answer-label">{{ parceiro?.name || 'Seu Amor' }}</div>
+                   <div v-if="dailyQuestion?.partnerAnswer === 'LOCKED'" class="answer-locked"><Clock :size="14"/> Aguardando resposta...</div>
+                   <div v-else class="answer-text highlight">{{ dailyQuestion?.partnerAnswer }}</div>
                  </div>
                </div>
             </div>
@@ -231,14 +225,14 @@
                  <div class="post-layout-flex">
                    <div class="post-avatar-col cursor-pointer" @click="irParaPerfil(post.authorId)">
                      <div class="avatar-img-round">
-                       <img v-if="post.author.avatarUrl" :src="post.author.avatarUrl" />
-                       <template v-else>{{ getInicial(post.author.name) }}</template>
+                       <img v-if="post.author?.avatarUrl" :src="post.author.avatarUrl" />
+                       <template v-else>{{ getInicial(post.author?.name) }}</template>
                      </div>
                    </div>
                    
                    <div class="post-content-col">
                      <div class="post-header-line">
-                        <span class="post-author-name hover-underline" @click="irParaPerfil(post.authorId)">{{ post.author.name }}</span>
+                        <span class="post-author-name hover-underline" @click="irParaPerfil(post.authorId)">{{ post.author?.name }}</span>
                         <span class="post-time">{{ formatarDataHora(post.createdAt) }}</span>
                      </div>
                      
@@ -261,11 +255,11 @@
                      <div v-if="post.mostrarRespostas" class="nested-replies-area">
                        <div v-for="reply in post.replies" :key="reply.id" class="reply-flex-item">
                           <div class="avatar-img-round tiny-avatar cursor-pointer" @click="irParaPerfil(reply.authorId)">
-                            <img v-if="reply.author.avatarUrl" :src="reply.author.avatarUrl" />
-                            <template v-else>{{ getInicial(reply.author.name) }}</template>
+                            <img v-if="reply.author?.avatarUrl" :src="reply.author.avatarUrl" />
+                            <template v-else>{{ getInicial(reply.author?.name) }}</template>
                           </div>
                           <div class="reply-bubble-content">
-                             <span class="reply-author hover-underline cursor-pointer" @click="irParaPerfil(reply.authorId)">{{ reply.author.name }}</span>
+                             <span class="reply-author hover-underline cursor-pointer" @click="irParaPerfil(reply.authorId)">{{ reply.author?.name }}</span>
                              <span class="reply-text">{{ reply.content }}</span>
                           </div>
                        </div>
@@ -280,26 +274,26 @@
                
                <div v-if="feed.length === 0" class="empty-state-box">
                  <Sparkles :size="32" color="var(--text-muted)" style="margin-bottom: 15px; opacity: 0.5;" />
-                 <p>O silêncio é de ouro, mas palavras são eternas.<br/>Escreva a primeira mensagem.</p>
+                 <p>O silêncio é de ouro, mas palavras são eternas.<br/>A história de vocês neste canal começa aqui.</p>
                </div>
             </div>
           </div>
 
           <div class="composer-footer-anchor">
-             <div class="main-composer-box glass-panel">
-               <textarea class="composer-textarea" placeholder="O que você quer compartilhar agora?" v-model="novoTexto" @keydown.enter.prevent="enviarPost"></textarea>
+             <div class="main-composer-box glass-panel" :class="{'disabled-composer': canalAtivo?.isSystem}">
+               <textarea class="composer-textarea" :placeholder="canalAtivo?.isSystem ? 'Este é um canal exclusivo para registros do oráculo e do sistema.' : 'O que você quer compartilhar agora?'" v-model="novoTexto" @keydown.enter.prevent="enviarPost" :disabled="canalAtivo?.isSystem"></textarea>
                <div class="composer-toolbar">
                  <div class="composer-tools">
                    <input type="file" ref="postInputRef" style="display: none" accept="image/*" @change="onPostImageSelected" />
-                   <button class="btn-glass-standard" style="padding: 8px 15px;" @click="() => postInputRef.click()" :class="{ 'active': imagemPostBase64 }">
+                   <button class="btn-glass-standard" style="padding: 8px 15px;" @click="triggerPostImageInput" :class="{ 'active': imagemPostBase64 }" :disabled="canalAtivo?.isSystem">
                       <ImageIcon :size="16"/> <span class="hide-mobile-text">{{ imagemPostBase64 ? 'Imagem Pronta' : 'Foto' }}</span>
                    </button>
-                   <button class="btn-glass-standard" style="padding: 8px 15px;" @click="modoCapsula = !modoCapsula" :class="{ 'active': modoCapsula }">
+                   <button class="btn-glass-standard" style="padding: 8px 15px;" @click="modoCapsula = !modoCapsula" :class="{ 'active': modoCapsula }" :disabled="canalAtivo?.isSystem">
                       <Clock :size="16"/> <span class="hide-mobile-text">Cápsula</span>
                    </button>
                  </div>
                  
-                 <button class="btn-primary-send" @click="enviarPost" :disabled="isUploading">
+                 <button class="btn-glass-standard" @click="enviarPost" :disabled="isUploading || canalAtivo?.isSystem" style="border-radius: 50%; padding: 12px;">
                     <template v-if="isUploading"><Loader2 class="spin" :size="16"/></template>
                     <template v-else><Send :size="16"/></template>
                  </button>
@@ -312,30 +306,22 @@
           </div>
         </template>
 
-        <!-- ========================================== -->
-        <!-- ABA NOSSO MUNDO (O GRID DEFINITIVO)        -->
-        <!-- ========================================== -->
         <template v-if="abaAtiva === 'nosso-perfil'">
           <div class="scroll-area" style="padding: 0;">
-             
-             <!-- CAPA COLOSSAL (Colada no topo, respeitando margens verticais) -->
              <div class="mundo-master-cover">
-                <img class="cover-img" :src="usuarioLogado.relationship.coverImageUrl || 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&fit=crop'" />
+                <img class="cover-img" :src="usuarioLogado?.relationship?.coverImageUrl || 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&fit=crop'" />
                 <div class="cover-gradient"></div>
                 <div class="cover-overlay">
-                   <h2 class="playfair">{{ usuarioLogado.relationship.name }}</h2>
+                   <h2 class="playfair">{{ usuarioLogado?.relationship?.name || 'Nosso Mundo' }}</h2>
                 </div>
                 <input type="file" ref="relCoverInputRef" style="display: none" accept="image/*" @change="onRelCoverSelected" />
-                <button @click="() => relCoverInputRef.click()" class="btn-glass-standard abs-bottom-right" :disabled="isUploadingCover">
+                <button @click="triggerRelCoverInput" class="btn-glass-standard abs-bottom-right" :disabled="isUploadingCover">
                   <template v-if="isUploadingCover"><Loader2 class="spin" :size="14"/></template>
                   <template v-else><Camera :size="14"/> Alterar Capa</template>
                 </button>
              </div>
 
-             <!-- GRID INFERIOR DE 3 COLUNAS (Perfeitamente Alinhadas) -->
              <div class="mundo-bento-grid-3 pad-responsive">
-                
-                <!-- COLUNA 1: CARROSSEL DE GALERIA 9:16 -->
                 <div class="bento-glass-card column-wrapper">
                    <div class="card-header-flex" style="padding: 25px 25px 0 25px;">
                       <h3 class="playfair">Nossa Galeria</h3>
@@ -361,7 +347,6 @@
                    </div>
                 </div>
 
-                <!-- COLUNA 2: HISTÓRIA E SONHOS VERTICALIZADOS -->
                 <div class="bento-glass-card column-wrapper" style="padding: 25px;">
                    <div class="card-header-flex">
                       <h3 class="playfair">Nossa História</h3>
@@ -391,38 +376,34 @@
                       <div v-for="meta in metasCasal" :key="meta.id" class="dream-item">
                          <Sparkles :size="16" color="var(--accent-color)"/> <span>{{ meta.title }}</span>
                       </div>
-                      <div v-if="metasCasal.length === 0" class="empty-list-text">O que vocês sonham em fazer juntos?</div>
+                      <div v-if="metasCasal.length === 0" class="empty-list-text">O que vocês sonham em construir juntos?</div>
                    </div>
                 </div>
 
-                <!-- COLUNA 3: SPOTIFY E ROLETA (Tudo na mesma largura) -->
                 <div class="column-wrapper gap-vertical">
-                   
-                   <!-- Spotify -->
                    <div class="bento-glass-card" style="padding: 25px;">
                       <div class="card-header-flex" style="margin-bottom: 15px;">
                          <h3 class="playfair" style="display:flex; align-items:center; gap:8px;"><Music :size="18"/> Trilha Sonora</h3>
                          <button class="btn-glass-standard" style="padding: 6px 12px; font-size: 11px;" @click="modalConfigAberto = true">Editar</button>
                       </div>
                       <div class="spotify-wrapper">
-                         <iframe v-if="usuarioLogado.relationship.spotifyUri" :src="formatarSpotifyIframe(usuarioLogado.relationship.spotifyUri)" width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 16px;"></iframe>
+                         <iframe v-if="usuarioLogado?.relationship?.spotifyUri" :src="formatarSpotifyIframe(usuarioLogado.relationship.spotifyUri)" width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 16px;"></iframe>
                          <div v-else class="empty-spotify-slot" @click="modalConfigAberto = true">
                             Clique aqui para colar a música tema de vocês.
                          </div>
                       </div>
                    </div>
 
-                   <!-- Roleta Incorporada -->
                    <div class="bento-glass-card roleta-bento-card">
                       <div class="roleta-inner text-center">
                          <div class="icon-pulse-wrapper">
                             <Calendar :size="28" color="white" />
                          </div>
                          <h4 class="playfair" style="font-size: 20px;">O Destino</h4>
-                         <p class="subtitle-tiny">Sorteie um date e criaremos a sala de planejamento.</p>
+                         <p class="subtitle-tiny">Sorteie um encontro embasado nos sonhos de vocês.</p>
                          
                          <div v-if="isSpinning" class="loading-state-tiny">
-                            <Loader2 class="spin" :size="20" color="var(--accent-color)" /> Sorteando...
+                            <Loader2 class="spin" :size="20" color="var(--accent-color)" /> Consultando a IA...
                          </div>
                          <div v-else-if="ideaSorteada" class="result-tiny slide-up">
                             {{ ideaSorteada.title }}
@@ -433,14 +414,11 @@
                          </button>
                       </div>
                    </div>
-                   
                 </div>
-
              </div>
           </div>
         </template>
 
-        <!-- === ABA PERFIS DUPLOS (COM FOTO ALINHADA E ABA MURAL) === -->
         <template v-if="abaAtiva === 'nossos-perfis'">
           <div class="scroll-area" style="padding: 0;">
              
@@ -448,7 +426,7 @@
                 <div class="mundo-master-cover">
                    <img class="cover-img" :src="perfilDados?.coverUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&fit=crop'" />
                    <input type="file" ref="profileCoverInputRef" style="display: none" accept="image/*" @change="onProfileCoverSelected" />
-                   <button v-if="perfilVisivel === 'me'" @click="() => profileCoverInputRef.click()" class="btn-glass-standard abs-bottom-right" :disabled="isUploadingProfileCover">
+                   <button v-if="perfilVisivel === 'me'" @click="triggerProfileCoverInput" class="btn-glass-standard abs-bottom-right" :disabled="isUploadingProfileCover">
                      <template v-if="isUploadingProfileCover"><Loader2 class="spin" :size="14"/></template>
                      <template v-else><Camera :size="14"/> Alterar Capa</template>
                    </button>
@@ -456,8 +434,8 @@
 
                 <div class="hero-info-wrapper pad-responsive">
                    <div class="hero-avatar-box">
-                      <img v-if="perfilDados.avatarUrl" :src="perfilDados.avatarUrl" />
-                      <template v-else>{{ getInicial(perfilDados.name) }}</template>
+                      <img v-if="perfilDados?.avatarUrl" :src="perfilDados.avatarUrl" />
+                      <template v-else>{{ getInicial(perfilDados?.name) }}</template>
                       
                       <input type="file" ref="fileInputRef" style="display: none" accept="image/*" @change="onFileSelected" />
                       <button v-if="perfilVisivel === 'me'" @click="triggerFileInput" class="btn-edit-avatar-small">
@@ -468,12 +446,13 @@
                    
                    <div class="hero-text-content">
                       <div class="name-row">
-                         <h2 class="playfair">{{ perfilDados.name }}</h2>
+                         <h2 class="playfair">{{ perfilDados?.name || 'Carregando...' }}</h2>
                          
                          <div class="mood-dropdown-wrapper">
-                            <button class="btn-mood-pill" @click="perfilVisivel === 'me' ? mostrarMenuHumor = !mostrarMenuHumor : null">
-                               <component :is="obterIconeLucide(perfilDados.moodStatus)" :size="16" :color="obterCorHumor(perfilDados.moodStatus)" />
-                               <span v-if="perfilVisivel === 'me'"><ChevronDown :size="14" /></span>
+                            <button class="btn-mood-pill" @click="perfilVisivel === 'me' ? mostrarMenuHumor = !mostrarMenuHumor : null" :disabled="perfilVisivel !== 'me'">
+                               <component :is="obterIconeLucide(perfilDados?.moodStatus)" :size="16" :color="obterCorHumor(perfilDados?.moodStatus)" style="flex-shrink: 0;" />
+                               <span class="mood-label-text">{{ obterLabelHumor(perfilDados?.moodStatus) || 'Normal' }}</span>
+                               <ChevronDown v-if="perfilVisivel === 'me'" :size="14" style="margin-left: 2px; flex-shrink: 0;" />
                             </button>
                             <div v-if="mostrarMenuHumor && perfilVisivel === 'me'" class="mood-menu glass-panel">
                                <div v-for="mood in moodOptions" :key="mood.id" class="mood-item" @click="atualizarHumorEFechar(mood.id)">
@@ -483,32 +462,31 @@
                          </div>
                       </div>
                       
-                      <span class="username-tag">@{{ perfilDados.username }}</span>
+                      <span class="username-tag">@{{ perfilDados?.username || 'usuario' }}</span>
                       
                       <div v-if="perfilVisivel === 'me' && editandoBio" class="bio-edit-box mt-2">
                          <textarea class="glass-input-premium" v-model="novaBio" placeholder="Escreva algo sobre você..." style="height: 80px; padding: 15px; font-size: 14px; width: 100%;"></textarea>
                          <button class="btn-glass-standard" style="padding: 8px 20px;" @click="salvarBio">Salvar Bio</button>
                       </div>
                       <div v-else @click="perfilVisivel === 'me' ? editandoBio = true : null" class="bio-text mt-2" :class="{'cursor-pointer': perfilVisivel === 'me'}">
-                         {{ perfilDados.bio || (perfilVisivel === 'me' ? 'Adicionar biografia...' : 'Nenhuma biografia informada.') }}
+                         {{ perfilDados?.bio || (perfilVisivel === 'me' ? 'Adicionar biografia...' : 'Nenhuma biografia informada.') }}
                       </div>
                    </div>
                 </div>
 
                 <div class="profile-tabs pad-responsive">
                    <button :class="{'active': perfilAbaAtiva === 'mural'}" @click="perfilAbaAtiva = 'mural'">Mural Pessoal</button>
-                   <button :class="{'active': perfilAbaAtiva === 'comentarios'}" @click="perfilAbaAtiva = 'comentarios'">Comentários</button>
-                   <button v-if="perfilVisivel === 'me'" :class="{'active': perfilAbaAtiva === 'salvos'}" @click="perfilAbaAtiva = 'salvos'">Salvos</button>
                 </div>
                 
                 <div class="profile-tab-content pad-responsive">
                    
-                   <div v-if="perfilAbaAtiva === 'mural'">
-                      <div v-if="perfilVisivel === 'me'" class="glass-panel" style="padding: 20px; border-radius: 24px; margin-bottom: 30px;">
+                   <div v-if="perfilAbaAtiva === 'mural'" class="mural-layout-inverted">
+                      
+                      <div v-if="perfilVisivel === 'me'" class="glass-panel composer-fixo" style="padding: 20px; border-radius: 24px; margin-bottom: 30px;">
                          <textarea class="composer-textarea" v-model="novoPostPerfilTexto" placeholder="Poste no seu mural pessoal..." style="height: 60px; margin-bottom: 10px;"></textarea>
                          <div class="composer-toolbar">
                             <input type="file" ref="profilePostInputRef" style="display: none" accept="image/*" @change="onProfilePostImageSelected" />
-                            <button @click="() => profilePostInputRef.click()" class="btn-glass-standard" :class="{'active': novoPostPerfilImg}">
+                            <button @click="triggerProfilePostInput" class="btn-glass-standard" :class="{'active': novoPostPerfilImg}">
                               <ImageIcon :size="16"/> <span>{{ novoPostPerfilImg ? 'Foto Anexada' : 'Adicionar Foto' }}</span>
                             </button>
                             <button class="btn-glass-standard" style="width: auto; padding: 10px 25px; border-radius: 30px;" @click="enviarPostPerfil" :disabled="isUploadingMural">
@@ -518,22 +496,21 @@
                          </div>
                       </div>
 
-                      <div v-for="post in profilePosts" :key="post.id" class="glass-panel post-bento-card" style="margin-bottom: 20px; padding: 25px;">
-                         <div class="post-header-line mb-2">
-                            <span class="post-author-name">{{ perfilDados.name }}</span>
-                            <span class="post-time">{{ formatarDataHora(post.createdAt) }}</span>
+                      <div class="mural-posts-lista">
+                         <div v-for="post in profilePosts" :key="post.id" class="glass-panel post-bento-card" style="margin-bottom: 20px; padding: 25px;">
+                            <div class="post-header-line mb-2">
+                               <span class="post-author-name">{{ perfilDados?.name }}</span>
+                               <span class="post-time">{{ formatarDataHora(post.createdAt) }}</span>
+                            </div>
+                            <div class="post-content-text">{{ post.content }}</div>
+                            <img v-if="post.imageUrl" :src="post.imageUrl" class="post-image" />
                          </div>
-                         <div class="post-content-text">{{ post.content }}</div>
-                         <img v-if="post.imageUrl" :src="post.imageUrl" class="post-image" />
-                      </div>
-                      
-                      <div v-if="profilePosts.length === 0" class="empty-state-box">
-                         <p>O mural de {{ perfilDados.name }} está vazio.</p>
+                         
+                         <div v-if="profilePosts.length === 0" class="empty-state-box">
+                            <p>O mural de {{ perfilDados?.name }} está vazio.</p>
+                         </div>
                       </div>
                    </div>
-
-                   <div v-if="perfilAbaAtiva === 'comentarios'" class="empty-state-box">Em breve: Todo o histórico de comentários aparecerá aqui.</div>
-                   <div v-if="perfilAbaAtiva === 'salvos'" class="empty-state-box">Em breve: Seus itens favoritados aparecerão aqui.</div>
 
                 </div>
              </div>
@@ -541,10 +518,6 @@
         </template>
       </main>
 
-      <!-- ========================================== -->
-      <!-- MODALS ABSOLUTOS (AJUSTADOS PARA NÃO VAZAR)-->
-      <!-- ========================================== -->
-      
       <div v-if="modalSaudadeAberto" class="modal-overlay-blur">
          <div class="modal-content-glass pop-in">
             <div class="modal-icon-circle"><Flame :size="40" color="#F43F5E" /></div>
@@ -570,9 +543,6 @@
          </div>
       </div>
 
-      <!-- ========================================== -->
-      <!-- CHAT WIDGET (BLINDADO NA RAIZ DO APP)      -->
-      <!-- ========================================== -->
       <div class="chat-widget-absolute" :class="{ 'is-open': isChatOpen }">
         <button class="chat-trigger-btn" @click="isChatOpen = !isChatOpen">
           <MessageCircle v-if="!isChatOpen" :size="28" color="white" />
@@ -581,27 +551,25 @@
         
         <div class="chat-window-panel glass-panel" v-show="isChatOpen">
           <div class="chat-header-blur">
-            <!-- Fallback Seguro para quando Parceiro não carregar imediatamente -->
             <div class="chat-header-info cursor-pointer" @click="parceiro ? irParaPerfil(parceiro.id) : null">
                <div class="avatar-img-round" style="width: 40px; height: 40px; border:none; box-shadow:none;">
                  <img v-if="parceiro?.avatarUrl" :src="parceiro.avatarUrl" />
-                 <template v-else>{{ getInicial(parceiro?.name || 'A') }}</template>
+                 <template v-else>{{ getInicial(parceiro?.name) }}</template>
                </div>
                <div class="chat-header-text">
-                 <span class="name">{{ parceiro?.name || 'Meu Amor' }}</span>
-                 <span class="status">
+                 <span class="name">{{ parceiro?.name || 'Aguardando Parceiro...' }}</span>
+                 <span class="status" v-if="parceiro">
                     <component :is="obterIconeLucide(parceiro?.moodStatus)" :size="10" :color="obterCorHumor(parceiro?.moodStatus)" style="margin-right: 4px;" />
                     {{ obterLabelHumor(parceiro?.moodStatus) || 'Online' }}
                  </span>
                </div>
             </div>
-            <!-- Botão fechar sutil -->
             <button @click="isChatOpen = false" class="btn-close-subtle" style="width: 30px; height: 30px;"><ChevronDown :size="20" /></button>
           </div>
           
           <div class="chat-message-list scroll-area hide-scrollbar">
-             <div v-for="(msg, idx) in mensagensChat" :key="idx" class="chat-bubble-row" :class="{'is-mine': msg.authorId === usuarioLogado.id}">
-               <div v-if="msg.authorId !== usuarioLogado.id" class="avatar-img-round tiny-avatar cursor-pointer" @click="irParaPerfil(msg.authorId)" style="border:none;">
+             <div v-for="(msg, idx) in mensagensChat" :key="idx" class="chat-bubble-row" :class="{'is-mine': msg.authorId === usuarioLogado?.id}">
+               <div v-if="msg.authorId !== usuarioLogado?.id" class="avatar-img-round tiny-avatar cursor-pointer" @click="irParaPerfil(msg.authorId)" style="border:none;">
                  <img v-if="msg.authorAvatarUrl" :src="msg.authorAvatarUrl" />
                  <template v-else>{{ getInicial(msg.authorName) }}</template>
                </div>
@@ -630,10 +598,10 @@ import { io } from 'socket.io-client';
 import { 
   Heart, MessageCircle, Sparkles, UserIcon, X, Calendar, Bell, Settings, Loader2,
   ImageIcon, Send, LogOut, Hash, Menu, ChevronLeft, ChevronRight, Plus, Camera, Lock, Unlock, Clock, Gift, Flame,
-  BatteryWarning, Wine, Shield, Smile, ChevronDown
+  BatteryWarning, Wine, Shield, Smile, ChevronDown, Music, MoreVertical, Trash2 
 } from 'lucide-vue-next'; 
 
-const URL_API = 'https://verona-api.onrender.com'; // Servidor Oficial (Render)
+const URL_API = 'https://verona-api.onrender.com'; // Mantenha sua URL do Render
 let socket = null;
 
 const usuarioLogado = ref(null);
@@ -650,9 +618,9 @@ const coupleName = ref('');
 const sidebarCollapsed = ref(false);
 const isMobileMenuOpen = ref(false);
 const isChatOpen = ref(false);
-const abaAtiva = ref('feed'); // Abre sempre no Feed por padrão
+const abaAtiva = ref('feed'); 
+const menuCanalAberto = ref(null);
 
-// MODALS E LOADERS
 const modalSaudadeAberto = ref(false);
 const textoSaudade = ref('');
 const modalConfigAberto = ref(false);
@@ -664,13 +632,12 @@ const isUploadingProfileCover = ref(false);
 const isUploadingAvatar = ref(false);
 const isUploadingMemory = ref(false);
 const isUploadingMural = ref(false);
+const isAuthLoading = ref(false); 
 
-// NOTIFICAÇÕES
 const notificacoes = ref([]);
 const dropdownNotificacoes = ref(false);
 const naoLidasCount = computed(() => notificacoes.value.filter(n => !n.isRead).length);
 
-// PERFIL DUPLO
 const perfilVisivel = ref('me'); 
 const perfilAbaAtiva = ref('mural');
 const editandoBio = ref(false);
@@ -688,7 +655,6 @@ const perfilDados = computed(() => {
   return parceiro.value;
 });
 
-// CANAIS E FEED
 const canais = ref([]);
 const canalAtivo = ref(null);
 const modoCriarCanal = ref(false);
@@ -698,11 +664,9 @@ const novoTexto = ref('');
 const postInputRef = ref(null);
 const imagemPostBase64 = ref('');
 
-// CHAT
 const mensagensChat = ref([]);
 const novaMensagemChat = ref('');
 
-// GAMIFICAÇÃO & MUNDO
 const dailyQuestion = ref(null);
 const minhaRespostaDaily = ref('');
 const ideaSorteada = ref(null);
@@ -716,7 +680,6 @@ const galeriaReal = ref([]);
 const memoryInputRef = ref(null);
 const relCoverInputRef = ref(null);
 
-// Mapeamento de Humor
 const moodOptions = [
   { id: 'exhausted', lucide: BatteryWarning, color: '#EF4444', label: 'Bateria Fraca' },
   { id: 'romantic', lucide: Wine, color: '#D946EF', label: 'Romântico' },
@@ -730,18 +693,47 @@ const obterLabelHumor = (moodId) => { const f = moodOptions.find(m => m.id === m
 
 const configurarAxiosToken = (token) => { axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; };
 
+const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
+const triggerProfileCoverInput = () => { if (profileCoverInputRef.value) profileCoverInputRef.value.click(); };
+const triggerRelCoverInput = () => { if (relCoverInputRef.value) relCoverInputRef.value.click(); };
+const triggerProfilePostInput = () => { if (profilePostInputRef.value) profilePostInputRef.value.click(); };
+const triggerMemoryInput = () => { if (memoryInputRef.value) memoryInputRef.value.click(); };
+const triggerPostImageInput = () => { if (postInputRef.value) postInputRef.value.click(); };
+
 const irParaPerfil = (id) => {
   if(!id) return;
+  if (id === usuarioLogado.value?.id) {
+     perfilVisivel.value = 'me';
+  } else if (parceiro.value && id === parceiro.value.id) {
+     perfilVisivel.value = 'partner';
+  } else {
+     return; 
+  }
   abaAtiva.value = 'nossos-perfis';
-  perfilVisivel.value = (id === usuarioLogado.value.id) ? 'me' : 'partner';
   isMobileMenuOpen.value = false;
 };
 
 const mudarAba = (aba) => { abaAtiva.value = aba; isMobileMenuOpen.value = false; };
 const mudarCanal = (canal) => { canalAtivo.value = canal; abaAtiva.value = 'feed'; isMobileMenuOpen.value = false; };
 
+const abrirMenuCanal = (id) => {
+  if (menuCanalAberto.value === id) menuCanalAberto.value = null;
+  else menuCanalAberto.value = id;
+};
+
+const deletarCanal = async (canal) => {
+  if (canal.isSystem) return alert("Canais de sistema não podem ser apagados.");
+  if (confirm(`Tem certeza que deseja excluir o canal #${canal.name} e todas as suas mensagens?`)) {
+    try {
+      await axios.delete(`${URL_API}/channels/${canal.id}`);
+      await carregarCanais();
+      menuCanalAberto.value = null;
+    } catch (e) { alert("Erro ao excluir o canal."); }
+  }
+};
+
 onMounted(async () => {
-  document.title = "Verona"; // Nome da Aba do Navegador
+  document.title = "Verona"; 
   const tokenSalvo = localStorage.getItem('verona_token');
   if (tokenSalvo) {
     configurarAxiosToken(tokenSalvo);
@@ -749,9 +741,9 @@ onMounted(async () => {
       const res = await axios.get(`${URL_API}/auth/me`);
       usuarioLogado.value = { ...res.data.user, relationship: res.data.relationship };
       parceiro.value = res.data.partner;
-      novaBio.value = usuarioLogado.value.bio || '';
-      spotifyTemp.value = usuarioLogado.value.relationship.spotifyUri || '';
-      abaAtiva.value = 'feed'; // Força abrir no feed
+      novaBio.value = usuarioLogado.value?.bio || '';
+      spotifyTemp.value = usuarioLogado.value?.relationship?.spotifyUri || '';
+      abaAtiva.value = 'feed'; 
     } catch (e) { localStorage.removeItem('verona_token'); }
   }
 });
@@ -759,15 +751,19 @@ onMounted(async () => {
 watch(() => usuarioLogado.value, (user) => {
   if (user && user.relationship?.status === 'ACTIVE') {
     carregarCanais(); carregarDailyQuestion(); carregarHistoricoChat(); carregarMemories(); carregarNotificacoes(); 
-    formDatas.startDate = user.relationship.startDate ? user.relationship.startDate.split('T')[0] : '';
-    formDatas.firstKiss = user.relationship.firstKiss ? user.relationship.firstKiss.split('T')[0] : '';
-    metasCasal.value = user.relationship.goals || [];
+    formDatas.startDate = user.relationship?.startDate ? user.relationship.startDate.split('T')[0] : '';
+    formDatas.firstKiss = user.relationship?.firstKiss ? user.relationship.firstKiss.split('T')[0] : '';
+    metasCasal.value = user.relationship?.goals || [];
     
     if(!socket) {
-      // Força WebSockets nativos para evitar queda no Render
       socket = io(URL_API, { transports: ['websocket', 'polling'] }); 
       socket.emit('entrar_na_sala', user.relationship.id);
       socket.on('receber_mensagem', (msg) => mensagensChat.value.push(msg));
+      socket.on('feed_atualizado', (dados) => {
+        if (canalAtivo.value && canalAtivo.value.id === dados.channelId) {
+          carregarFeed(); 
+        }
+      });
     }
   }
 });
@@ -775,7 +771,6 @@ watch(() => usuarioLogado.value, (user) => {
 watch(() => canalAtivo.value, (canal) => { if (canal) carregarFeed(); });
 watch(() => perfilVisivel.value, () => { carregarMuralPerfil(); editandoBio.value = false; perfilAbaAtiva.value = 'mural'; mostrarMenuHumor.value = false; });
 
-// NOTIFICAÇÕES
 const carregarNotificacoes = async () => { try { const res = await axios.get(`${URL_API}/notifications`); notificacoes.value = res.data; } catch(e){} };
 const toggleNotificacoes = async () => {
   dropdownNotificacoes.value = !dropdownNotificacoes.value;
@@ -785,40 +780,33 @@ const toggleNotificacoes = async () => {
 };
 const obterIconeEmojiNotif = (type) => { if(type === 'MISS_YOU') return '🔥'; if(type === 'NEW_POST' || type === 'NEW_REPLY') return '💬'; if(type === 'NEW_MEMORY') return '📸'; return '✨'; };
 
-// MURAIS E PERFIL
 const carregarMuralPerfil = async () => { if (!perfilDados.value) return; try { const res = await axios.get(`${URL_API}/profile-posts/${perfilDados.value.id}`); profilePosts.value = res.data; } catch(e) {} };
 const onProfilePostImageSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (ev) => { novoPostPerfilImg.value = ev.target.result; }; reader.readAsDataURL(file); };
+
 const enviarPostPerfil = async () => {
   if (!novoPostPerfilTexto.value.trim() && !novoPostPerfilImg.value) return;
   isUploadingMural.value = true;
-  try { await axios.post(`${URL_API}/profile-posts`, { content: novoPostPerfilTexto.value, imageUrl: novoPostPerfilImg.value }); novoPostPerfilTexto.value = ''; novoPostPerfilImg.value = ''; await carregarMuralPerfil(); } catch(e) { alert("Erro ao postar."); } finally { isUploadingMural.value = false; }
+  try { 
+    await axios.post(`${URL_API}/profile-posts`, { content: novoPostPerfilTexto.value, imageUrl: novoPostPerfilImg.value }); 
+    novoPostPerfilTexto.value = ''; novoPostPerfilImg.value = ''; await carregarMuralPerfil(); 
+  } catch(e) { alert("Erro ao postar."); } finally { isUploadingMural.value = false; }
 };
+
 const salvarBio = async () => { try { await axios.put(`${URL_API}/users/me`, { bio: novaBio.value }); usuarioLogado.value.bio = novaBio.value; editandoBio.value = false; } catch(e) {} };
 const onProfileCoverSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (ev) => { const b64 = ev.target.result; isUploadingProfileCover.value = true; try { await axios.put(`${URL_API}/users/me`, { coverUrl: b64 }); usuarioLogado.value.coverUrl = b64; } catch(err){} finally { isUploadingProfileCover.value = false; } }; reader.readAsDataURL(file); };
 const atualizarHumorEFechar = async (moodId) => { try { await axios.put(`${URL_API}/users/me`, { moodStatus: moodId }); usuarioLogado.value.moodStatus = moodId; mostrarMenuHumor.value = false; } catch(e) {} };
 
-// CORREÇÃO: Disparador do Avatar
-const triggerFileInput = () => { if (fileInputRef.value) fileInputRef.value.click(); };
 const onFileSelected = (event) => { 
-  const file = event.target.files[0]; 
-  if (!file) return; 
-  const reader = new FileReader(); 
+  const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); 
   reader.onload = async (e) => { 
-    const b64 = e.target.result; 
-    isUploadingAvatar.value = true; 
-    try { 
-       await axios.put(`${URL_API}/users/me`, { avatarUrl: b64 }); 
-       usuarioLogado.value.avatarUrl = b64; 
-    } catch(e) {} finally { isUploadingAvatar.value = false; } 
-  }; 
-  reader.readAsDataURL(file); 
+    const b64 = e.target.result; isUploadingAvatar.value = true; 
+    try { await axios.put(`${URL_API}/users/me`, { avatarUrl: b64 }); usuarioLogado.value.avatarUrl = b64; } catch(e) {} finally { isUploadingAvatar.value = false; } 
+  }; reader.readAsDataURL(file); 
 };
 
-// CAPA E CONFIGURAÇÕES
 const onRelCoverSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (ev) => { const b64 = ev.target.result; isUploadingCover.value = true; try { await axios.put(`${URL_API}/relationship`, { coverImageUrl: b64 }); usuarioLogado.value.relationship.coverImageUrl = b64; } catch(err){} finally { isUploadingCover.value = false; } }; reader.readAsDataURL(file); };
 const salvarConfig = async () => { try { await axios.put(`${URL_API}/relationship`, { spotifyUri: spotifyTemp.value }); usuarioLogado.value.relationship.spotifyUri = spotifyTemp.value; modalConfigAberto.value = false; } catch(e) {} };
 
-// PARSER SPOTIFY INTELIGENTE (Corrigido para aceitar links reais)
 const formatarSpotifyIframe = (link) => { 
   if(!link) return ''; 
   if (link.includes('embed')) return link; 
@@ -828,9 +816,7 @@ const formatarSpotifyIframe = (link) => {
   return link;
 };
 
-// MEMÓRIAS 
 const carregarMemories = async () => { try { const res = await axios.get(`${URL_API}/memories`); galeriaReal.value = res.data; } catch(e) {} };
-const triggerMemoryInput = () => { if (memoryInputRef.value) memoryInputRef.value.click(); };
 const onMemorySelected = (event) => {
   const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
   reader.onload = async (e) => {
@@ -840,48 +826,93 @@ const onMemorySelected = (event) => {
   }; reader.readAsDataURL(file);
 };
 
-// LÓGICAS NUCLEARES
 const abrirModalSaudade = () => { modalSaudadeAberto.value = true; textoSaudade.value = ''; };
 const dispararSaudade = async () => { if (!textoSaudade.value.trim()) return; try { await axios.post(`${URL_API}/notifications/miss-you`, { customMessage: textoSaudade.value }); modalSaudadeAberto.value = false; } catch(e) {} };
-
 const onPostImageSelected = (e) => { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (ev) => { imagemPostBase64.value = ev.target.result; }; reader.readAsDataURL(file); };
+
+const carregarFeed = async () => { 
+  if (!canalAtivo.value) return; 
+  try { 
+    const res = await axios.get(`${URL_API}/channels/${canalAtivo.value.id}/posts`); 
+    const stateMap = {};
+    feed.value.forEach(p => { stateMap[p.id] = { mostrar: p.mostrarRespostas, texto: p.novaResposta }; });
+    feed.value = res.data.map(post => ({ ...post, curtido: false, mostrarRespostas: stateMap[post.id]?.mostrar || false, novaResposta: stateMap[post.id]?.texto || '' })); 
+  } catch (err) {} 
+};
+
 const enviarPost = async () => { 
   if ((!novoTexto.value.trim() && !imagemPostBase64.value) || !canalAtivo.value) return; 
   isUploading.value = true;
-  try { await axios.post(`${URL_API}/posts`, { content: novoTexto.value, imageUrl: imagemPostBase64.value, channelId: canalAtivo.value.id, unlockAt: modoCapsula.value && dataCapsula.value ? dataCapsula.value : null }); novoTexto.value = ''; imagemPostBase64.value = ''; postInputRef.value.value = null; modoCapsula.value = false; dataCapsula.value = ''; await carregarFeed(); } catch (err) {} finally { isUploading.value = false; }
+  try { 
+    await axios.post(`${URL_API}/posts`, { content: novoTexto.value, imageUrl: imagemPostBase64.value, channelId: canalAtivo.value.id, unlockAt: modoCapsula.value && dataCapsula.value ? dataCapsula.value : null }); 
+    novoTexto.value = ''; imagemPostBase64.value = ''; if(postInputRef.value) postInputRef.value.value = null; modoCapsula.value = false; dataCapsula.value = ''; 
+  } catch (err) { alert(err.response?.data?.error || "Erro ao postar."); } finally { isUploading.value = false; }
 };
 
-const fazerLogin = async () => { try { const res = await axios.post(`${URL_API}/auth/login`, { email: email.value, password: senha.value }); localStorage.setItem('verona_token', res.data.token); configurarAxiosToken(res.data.token); usuarioLogado.value = { ...res.data.user, relationship: res.data.relationship }; parceiro.value = res.data.partner; senha.value = ''; abaAtiva.value = 'feed'; } catch (err) { alert(err.response?.data?.error || 'Erro no login'); } };
-const fazerCadastro = async () => { try { await axios.post(`${URL_API}/auth/register`, { name: nome.value, email: email.value, username: username.value, password: senha.value, inviteCode: codigoConvite.value, licenseKey: licenseKey.value, coupleName: coupleName.value }); alert('Santuário criado com sucesso! Faça login.'); modoAuth.value = 'login'; senha.value = ''; } catch (err) { alert(err.response?.data?.error || 'Erro no cadastro'); } };
-const fazerLogout = () => { usuarioLogado.value = null; parceiro.value = null; localStorage.removeItem('verona_token'); delete axios.defaults.headers.common['Authorization']; if (socket) { socket.disconnect(); socket = null; } };
-const copiarCodigo = () => { navigator.clipboard.writeText(usuarioLogado.value.relationship.inviteCode); alert('Código copiado!'); };
+const fazerLogin = async () => { 
+  if (!email.value || !senha.value) return;
+  isAuthLoading.value = true; 
+  try { 
+    const res = await axios.post(`${URL_API}/auth/login`, { email: email.value, password: senha.value }); 
+    localStorage.setItem('verona_token', res.data.token); 
+    configurarAxiosToken(res.data.token); 
+    usuarioLogado.value = { ...res.data.user, relationship: res.data.relationship }; 
+    parceiro.value = res.data.partner; 
+    senha.value = ''; 
+    abaAtiva.value = 'feed'; 
+  } catch (err) { 
+    alert(err.response?.data?.error || 'Erro de conexão com o servidor. Verifique suas credenciais.'); 
+  } finally {
+    isAuthLoading.value = false;
+  }
+};
 
-const carregarCanais = async () => { try { const res = await axios.get(`${URL_API}/channels`); canais.value = res.data; if (res.data.length > 0) canalAtivo.value = res.data.find(c => c.name === 'geral') || res.data[0]; } catch (err) {} };
-const criarCanal = async () => { if (!novoCanalNome.value.trim()) return; try { await axios.post(`${URL_API}/channels`, { name: novoCanalNome.value }); novoCanalNome.value = ''; modoCriarCanal.value = false; carregarCanais(); } catch (err) {} };
-const carregarFeed = async () => { if (!canalAtivo.value) return; try { const res = await axios.get(`${URL_API}/channels/${canalAtivo.value.id}/posts`); feed.value = res.data.map(post => ({ ...post, curtido: false, mostrarRespostas: false, novaResposta: '' })); } catch (err) {} };
+const fazerCadastro = async () => { 
+  isAuthLoading.value = true;
+  try { 
+    await axios.post(`${URL_API}/auth/register`, { name: nome.value, email: email.value, username: username.value, password: senha.value, inviteCode: codigoConvite.value, licenseKey: licenseKey.value, coupleName: coupleName.value }); 
+    alert('Santuário criado com sucesso! Faça login para entrar.'); 
+    modoAuth.value = 'login'; 
+    senha.value = ''; 
+  } catch (err) { 
+    alert(err.response?.data?.error || 'Erro no cadastro.'); 
+  } finally {
+    isAuthLoading.value = false;
+  }
+};
+
+const fazerLogout = () => { usuarioLogado.value = null; parceiro.value = null; localStorage.removeItem('verona_token'); delete axios.defaults.headers.common['Authorization']; if (socket) { socket.disconnect(); socket = null; } };
+const copiarCodigo = () => { navigator.clipboard.writeText(usuarioLogado.value?.relationship?.inviteCode); alert('Código copiado!'); };
+
+const carregarCanais = async () => { 
+  try { 
+    const res = await axios.get(`${URL_API}/channels`); 
+    canais.value = res.data; 
+    if (res.data.length > 0 && !canalAtivo.value) canalAtivo.value = res.data.find(c => c.name === 'geral') || res.data[0]; 
+  } catch (err) {} 
+};
+
+const criarCanal = async () => { if (!novoCanalNome.value.trim()) return; try { await axios.post(`${URL_API}/channels`, { name: novoCanalNome.value }); novoCanalNome.value = ''; modoCriarCanal.value = false; await carregarCanais(); } catch (err) {} };
+
 const toggleRespostas = (post) => { post.mostrarRespostas = !post.mostrarRespostas; };
-const enviarResposta = async (post) => { if (!post.novaResposta?.trim()) return; try { const res = await axios.post(`${URL_API}/posts`, { content: post.novaResposta, parentId: post.id, channelId: canalAtivo.value.id }); if (!post.replies) post.replies = []; res.data.author = { name: usuarioLogado.value.name, avatarUrl: usuarioLogado.value.avatarUrl }; post.replies.push(res.data); post.novaResposta = ''; } catch(e) {} };
+const enviarResposta = async (post) => { 
+  if (!post.novaResposta?.trim()) return; 
+  try { await axios.post(`${URL_API}/posts`, { content: post.novaResposta, parentId: post.id, channelId: canalAtivo.value.id }); post.novaResposta = ''; } catch(e) {} 
+};
 
 const adicionarMeta = async () => { const titulo = prompt("Qual a nova meta de vocês?"); if (!titulo) return; try { const res = await axios.post(`${URL_API}/goals`, { title: titulo }); metasCasal.value.push(res.data); } catch(e) {} };
 const toggleEditDatas = async () => { if (editandoDatas.value) { try { await axios.put(`${URL_API}/relationship`, { startDate: formDatas.startDate, firstKiss: formDatas.firstKiss }); } catch(e) {} } editandoDatas.value = !editandoDatas.value; };
 
 const carregarHistoricoChat = async () => { try { const res = await axios.get(`${URL_API}/chat`); mensagensChat.value = res.data; } catch(e) {} };
-const enviarMensagemChat = () => { if (!novaMensagemChat.value.trim()) return; socket.emit('nova_mensagem', { texto: novaMensagemChat.value, authorName: usuarioLogado.value.name, authorId: usuarioLogado.value.id, authorAvatarUrl: usuarioLogado.value.avatarUrl, relationshipId: usuarioLogado.value.relationship.id }); novaMensagemChat.value = ''; };
+const enviarMensagemChat = () => { if (!novaMensagemChat.value.trim()) return; socket.emit('nova_mensagem', { texto: novaMensagemChat.value, authorName: usuarioLogado.value?.name, authorId: usuarioLogado.value?.id, authorAvatarUrl: usuarioLogado.value?.avatarUrl, relationshipId: usuarioLogado.value?.relationship?.id }); novaMensagemChat.value = ''; };
 
 const carregarDailyQuestion = async () => { try { const res = await axios.get(`${URL_API}/daily-question`); dailyQuestion.value = res.data; } catch(e) {} };
-const responderDaily = async () => { if (!minhaRespostaDaily.value.trim()) return; try { await axios.post(`${URL_API}/daily-question/answer`, { questionId: dailyQuestion.value.id, content: minhaRespostaDaily.value }); minhaRespostaDaily.value = ''; await carregarDailyQuestion(); if (dailyQuestion.value.partnerAnswered) { usuarioLogado.value.relationship.streakCount += 1; } } catch(e) {} };
+const responderDaily = async () => { if (!minhaRespostaDaily.value.trim()) return; try { await axios.post(`${URL_API}/daily-question/answer`, { questionId: dailyQuestion.value.id, content: minhaRespostaDaily.value }); minhaRespostaDaily.value = ''; await carregarDailyQuestion(); if (dailyQuestion.value?.partnerAnswered && usuarioLogado.value?.relationship) { usuarioLogado.value.relationship.streakCount += 1; } } catch(e) {} };
 
 const girarRoletaAnimado = () => { 
   isSpinning.value = true; 
   setTimeout(async () => { 
-    try { 
-      const res = await axios.get(`${URL_API}/date-ideas/random`); 
-      ideaSorteada.value = res.data; 
-      const safeName = `date-${res.data.title.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15)}`;
-      const channelRes = await axios.post(`${URL_API}/channels`, { name: safeName, description: `Planejamento para: ${res.data.title}` });
-      await axios.post(`${URL_API}/posts`, { content: `🎯 **O Destino Escolheu:** ${res.data.title}\n\nVamos planejar os detalhes por aqui! Quando vamos?`, channelId: channelRes.data.id });
-      await carregarCanais();
-    } catch(e){} finally { isSpinning.value = false; } 
+    try { const res = await axios.get(`${URL_API}/date-ideas/random`); ideaSorteada.value = res.data; } catch(e){} finally { isSpinning.value = false; } 
   }, 1800); 
 };
 
@@ -900,7 +931,6 @@ onUnmounted(() => { if (socket) socket.disconnect(); });
 /* ========================================== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap');
 
-/* REGRA DE OURO GLOBAL: Evita que inputs e telas vazem */
 *, *::before, *::after { box-sizing: border-box; max-width: 100%; }
 
 :root {
@@ -947,8 +977,6 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 /* ESTRUTURA GERAL */
 .app-master-wrapper { display: flex; height: 100vh; overflow: hidden; background: var(--bg-app); position: relative; width: 100vw; }
 .app-master-layout { display: flex; width: 100%; height: 100%; }
-
-/* GLASS PANELS E PADDINGS */
 .glass-panel { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.8); }
 .glass-card { background: var(--bg-surface); border-radius: 30px; box-shadow: var(--shadow-ambient); border: 1px solid var(--border-soft); overflow: hidden; }
 .pad-responsive { padding: 0 40px; }
@@ -962,9 +990,6 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 
 .btn-neon-large { background: var(--gradient-primary); color: white; border: none; font-weight: 800; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px var(--accent-glow); padding: 16px 30px; border-radius: 20px; font-size: 16px; }
 .btn-neon-large:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
-.btn-primary-send { background: var(--accent-color); color: white; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px var(--accent-glow); width: 45px; height: 45px; border-radius: 50%; }
-.btn-primary-send:hover { transform: scale(1.05); }
-
 .btn-icon-action { background: transparent; border: none; color: var(--text-muted); display: flex; align-items: center; gap: 5px; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 20px; transition: 0.2s; }
 .btn-icon-action:hover { background: rgba(0,0,0,0.04); }
 .btn-icon-action.active { color: var(--accent-color); background: rgba(139, 92, 246, 0.1); }
@@ -986,7 +1011,7 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .tiny-avatar { width: 28px; height: 28px; font-size: 10px; }
 
 /* LOGIN */
-.login-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #0A0710; padding: 20px; }
+.login-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #0A0710; padding: 20px; }
 .login-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6; animation: float 10s infinite alternate; }
 .orb-1 { width: 400px; height: 400px; background: #8B5CF6; top: -100px; left: -100px; }
 .orb-2 { width: 500px; height: 500px; background: #D946EF; bottom: -150px; right: -100px; animation-delay: -5s; }
@@ -1002,7 +1027,7 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .login-footer-link:hover { color: white; }
 .invite-code-box { background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.3); padding: 25px; border-radius: 20px; letter-spacing: 8px; color: white; font-size: 32px; font-weight: 800; margin: 30px 0; }
 
-/* SIDEBAR ESCURA */
+/* SIDEBAR ESCURA E CANAIS */
 .desktop-sidebar { width: 280px; background: var(--bg-sidebar); display: flex; flex-direction: column; padding: 40px 25px; transition: 0.3s; z-index: 100; box-shadow: 10px 0 30px rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.05); }
 .desktop-sidebar.collapsed { width: 90px; align-items: center; padding: 40px 15px; }
 .desktop-sidebar.collapsed .sidebar-avatar { display: flex; }
@@ -1011,15 +1036,25 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .nav-section-title { font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 15px; display: flex; justify-content: space-between; color: rgba(255,255,255,0.3); }
 .scroll-channels { max-height: 200px; overflow-y: auto; }
-.nav-item { padding: 12px 15px; border-radius: 16px; margin-bottom: 5px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+.nav-item { padding: 12px 15px; border-radius: 16px; margin-bottom: 5px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; position: relative; }
 .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
 .nav-item.active { background: rgba(255,255,255,0.1); color: white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .nav-text { color: inherit; }
+
+.channel-item-row { display: flex; justify-content: space-between; }
+.channel-options-btn { opacity: 0; background: transparent; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 50%; transition: 0.2s; }
+.channel-item-row:hover .channel-options-btn { opacity: 1; }
+.channel-options-btn:hover { background: rgba(255,255,255,0.1); }
+.channel-dropdown { position: absolute; right: -5px; top: 35px; width: 120px; padding: 8px; z-index: 50; display: flex; flex-direction: column; }
+.dropdown-item { background: transparent; border: none; text-align: left; padding: 10px; font-size: 13px; font-weight: 600; font-family: inherit; color: var(--text-main); display: flex; align-items: center; gap: 8px; border-radius: 12px; cursor: pointer; }
+.dropdown-item:hover:not(:disabled) { background: rgba(0,0,0,0.05); }
+.dropdown-item:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .streak-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); font-size: 12px; font-weight: 800; color: #F97316; text-transform: uppercase; letter-spacing: 1px; }
 
 /* PALCO CLARO E HEADER FLUTUANTE (TOP NAV) */
 .main-stage { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-app); position: relative; }
-.scroll-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; position: relative; padding-bottom: 40px;}
+.scroll-area { flex: 1; height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative; padding-bottom: 40px;}
 
 .top-nav-glass { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; z-index: 100; background: transparent; pointer-events: none; }
 .top-nav-left { pointer-events: auto; }
@@ -1040,12 +1075,11 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .notif-text { font-size: 14px; color: var(--text-main); line-height: 1.4; font-weight: 500; }
 .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-weight: 600; }
 
-/* CHAVINHA DE PERFIL NA TOP NAV */
 .dual-toggle-pill { background: rgba(255,255,255,0.9); backdrop-filter: blur(20px); border-radius: 40px; padding: 6px; display: flex; border: 1px solid var(--border-soft); box-shadow: var(--shadow-soft); pointer-events: auto; }
 .dual-toggle-pill button { background: transparent; border: none; color: var(--text-muted); font-weight: 700; padding: 10px 25px; border-radius: 30px; cursor: pointer; transition: 0.3s; font-size: 14px; }
 .dual-toggle-pill button.active { background: white; color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-/* FEED E POSTS (GLASS CARDS ISOLADOS) */
+/* FEED E POSTS */
 .daily-animated-banner { background: var(--gradient-cosmic); background-size: 300% 300%; animation: cosmicGradient 10s ease infinite; padding: 40px; border-radius: 30px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(43, 10, 61, 0.3); min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
 .daily-badge { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(10px); width: fit-content; }
 .daily-question-title { font-size: 28px; margin: 0 0 25px 0; color: white; position: relative; z-index: 2; line-height: 1.3; }
@@ -1084,7 +1118,8 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 
 /* COMPOSER */
 .composer-footer-anchor { padding: 0 40px 20px 40px; background: linear-gradient(to top, var(--bg-app) 70%, transparent); position: sticky; bottom: 0; z-index: 50; }
-.main-composer-box { padding: 20px 25px; }
+.main-composer-box { padding: 20px 25px; transition: 0.3s; }
+.main-composer-box.disabled-composer { opacity: 0.5; pointer-events: none; }
 .composer-textarea { width: 100%; border: none; background: transparent; resize: none; font-size: 16px; color: var(--text-main); font-family: inherit; margin-bottom: 15px; height: 60px; font-weight: 500; }
 .composer-textarea:focus { outline: none; }
 .composer-toolbar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-soft); padding-top: 15px; }
@@ -1097,26 +1132,24 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .cover-overlay h2 { color: white; font-size: 48px; margin: 0; text-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.1; }
 .abs-bottom-right { position: absolute; bottom: 20px; right: 20px; z-index: 2; }
 
-/* GRID DE 3 COLUNAS PERFEITAS */
 .mundo-bento-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; padding: 0 40px 40px 40px; }
 .column-wrapper { display: flex; flex-direction: column; height: 100%; }
 .gap-vertical { gap: 25px; }
-.bento-glass-card { background: rgba(255,255,255,0.7); border-radius: 30px; box-shadow: var(--shadow-ambient); border: 1px solid var(--border-soft); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
+.bento-glass-card { background: rgba(255,255,255,0.7); border-radius: 30px; box-shadow: var(--shadow-ambient); border: 1px solid rgba(255,255,255,0.8); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
 
-/* CARROSSEL NATIVO (GALERIA) */
-.memory-bento-card { padding: 0; display: flex; flex-direction: column; height: 500px; }
+.memory-bento-card { padding: 25px; display: flex; flex-direction: column; flex: 1; height: 100%; }
 .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .card-header-flex h3, .card-header-flex h4 { margin: 0; font-size: 20px; color: var(--text-main); }
-.gallery-vertical-scroll { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding: 0 25px 25px 25px; }
-.gallery-item-vertical { width: 100%; aspect-ratio: 9/16; border-radius: 20px; overflow: hidden; position: relative; flex-shrink: 0; box-shadow: var(--shadow-soft); }
-.gallery-item-vertical img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+
+.carousel-horizontal { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 15px; padding-bottom: 10px; flex: 1; height: 450px; }
+.carousel-slide { flex: 0 0 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; scroll-snap-align: start; background: var(--bg-app); border: 1px solid var(--border-soft); }
+.carousel-slide img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 .memory-info-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 25px; display: flex; flex-direction: column; justify-content: flex-end; color: white; }
 .memory-info-overlay .desc { font-weight: 700; font-size: 15px; margin-bottom: 8px; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .memory-info-overlay .meta { font-size: 12px; opacity: 0.8; font-weight: 600; }
 .empty-memory-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: 2px dashed var(--border-soft); border-radius: 20px; gap: 10px; transition: 0.2s; width: 100%; height: 100%; min-height: 300px; }
 
-/* HISTORIA E SONHOS (VERTICAL) */
-.history-bento-card { display: flex; flex-direction: column; height: 500px; }
+.history-bento-card { display: flex; flex-direction: column; height: 500px; padding: 25px; }
 .timeline-row-vertical { display: flex; flex-direction: column; gap: 15px; }
 .timeline-item { background: rgba(255,255,255,0.6); padding: 15px 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-soft); }
 .timeline-item .label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -1128,7 +1161,6 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .dream-item { background: rgba(255,255,255,0.6); padding: 12px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; color: var(--text-main); margin-bottom: 10px; border: 1px solid var(--border-soft); }
 .empty-list-text { color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px; font-weight: 500; }
 
-/* SPOTIFY E ROLETA (COLUNA 3) */
 .spotify-bento-card { display: flex; flex-direction: column; }
 .spotify-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
 .empty-spotify-slot { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: 2px dashed var(--border-soft); border-radius: 20px; width: 100%; transition: 0.2s; background: rgba(255,255,255,0.5); }
@@ -1137,12 +1169,11 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .roleta-inner { display: flex; flex-direction: column; align-items: center; gap: 15px; position: relative; z-index: 2; }
 .icon-pulse-wrapper { background: var(--gradient-primary); width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px var(--accent-glow); margin-bottom: 10px; position: relative; }
 .icon-pulse-wrapper::before { content: ''; position: absolute; inset: -20px; border-radius: 30px; border: 2px solid var(--accent-glow); animation: pulseRing 2s infinite; pointer-events: none; }
-@keyframes pulseRing { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 .subtitle-tiny { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
 .loading-state-tiny { display: flex; align-items: center; gap: 10px; font-weight: bold; color: var(--accent-color); margin-bottom: 15px; }
 .result-tiny { background: var(--bg-surface); padding: 15px; border-radius: 16px; font-weight: 800; color: var(--text-main); font-size: 18px; width: 100%; border: 1px solid var(--border-soft); margin-bottom: 15px; box-shadow: var(--shadow-soft); }
 
-/* PERFIL DUPLO V4 (ALINHAMENTO TOP) */
+/* PERFIL DUPLO V4 */
 .profile-hero-expanded { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 0; }
 .hero-info-wrapper { max-width: 1000px; width: 100%; display: flex; align-items: flex-end; gap: 30px; padding: 0 40px; margin-top: -70px; position: relative; z-index: 2; flex-wrap: wrap; }
 .hero-avatar-box { position: relative; width: 150px; height: 150px; border-radius: 50%; border: 8px solid var(--bg-app); background: white; display: flex; justify-content: center; align-items: center; font-size: 48px; font-weight: bold; color: var(--accent-color); box-shadow: var(--shadow-soft); overflow: hidden; flex-shrink: 0; }
@@ -1156,11 +1187,14 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .bio-edit-box { width: 100%; max-width: 500px; }
 .bio-text { font-size: 16px; color: var(--text-main); line-height: 1.6; max-width: 500px; margin-top: 15px; }
 
+/* CSS do Botão Mood Otimizado (Ponto 9) */
 .mood-dropdown-wrapper { position: relative; }
-.btn-mood-pill { background: var(--bg-surface); border: 1px solid var(--border-soft); padding: 8px 16px; border-radius: 30px; font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; height: 36px; }
-.btn-mood-pill:hover { transform: translateY(-2px); box-shadow: var(--shadow-ambient); }
-.mood-menu { position: absolute; top: 45px; left: 0; width: 200px; padding: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 100; border-radius: 20px; }
-.mood-item { padding: 10px 15px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; transition: 0.2s; color: var(--text-main); }
+.btn-mood-pill { background: var(--bg-surface); border: 1px solid var(--border-soft); padding: 8px 18px; border-radius: 30px; font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-soft); transition: 0.2s; height: 38px; max-width: 200px; }
+.btn-mood-pill .mood-label-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; display: inline-block; }
+.btn-mood-pill:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-ambient); }
+.btn-mood-pill:disabled { cursor: default; opacity: 0.9; }
+.mood-menu { position: absolute; top: 45px; left: 0; width: 220px; padding: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 100; border-radius: 20px; box-shadow: var(--shadow-ambient); }
+.mood-item { padding: 12px 15px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; transition: 0.2s; color: var(--text-main); white-space: nowrap; }
 .mood-item:hover { background: rgba(0,0,0,0.04); }
 
 .profile-tabs { display: flex; gap: 30px; border-bottom: 1px solid var(--border-soft); margin-top: 40px; margin-bottom: 30px; width: 100%; max-width: 1000px; padding: 0 40px; }
@@ -1170,18 +1204,22 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
 .profile-tabs button.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 4px; background: var(--text-main); border-radius: 4px 4px 0 0; }
 .profile-tab-content { width: 100%; max-width: 1000px; padding: 0 40px 50px 40px; margin: 0 auto;}
 
+/* Mural Invertido (Ponto 8 e 10) */
+.mural-layout-inverted { display: flex; flex-direction: column; }
+.mural-posts-lista { display: flex; flex-direction: column; }
+
 /* MODALS ABSOLUTOS */
 .modal-overlay-blur { position: fixed; inset: 0; background: rgba(12, 10, 21, 0.7); backdrop-filter: blur(15px); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-content-glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.5); padding: 40px; border-radius: 40px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
 .modal-icon-circle { background: rgba(244, 63, 94, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
 .input-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; }
 
-/* CHAT WHATSAPP STYLE (RAIZ ABSOLUTA BLINDADA) */
+/* CHAT WHATSAPP STYLE */
 .chat-widget-absolute { position: fixed; bottom: 30px; right: 30px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; pointer-events: none; }
 .chat-trigger-btn { width: 65px; height: 65px; border-radius: 50%; background: var(--gradient-primary); border: none; box-shadow: 0 10px 30px var(--accent-glow); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: auto; }
 .chat-trigger-btn:hover { transform: scale(1.1); }
 .chat-window-panel { width: 380px; height: 550px; background: rgba(255,255,255,0.95); border: 1px solid rgba(255,255,255,0.5); border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease-out; pointer-events: auto; }
-.chat-header-blur { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--border-soft); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(20px); z-index: 2; }
+.chat-header-blur { background: rgba(255,255,255,0.8); border-bottom: 1px solid var(--border-soft); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(20px); z-index: 2; }
 .chat-header-info { display: flex; align-items: center; gap: 12px; }
 .chat-header-text { display: flex; flex-direction: column; }
 .chat-header-text .name { font-weight: 800; font-size: 16px; color: var(--text-main); }
@@ -1209,8 +1247,6 @@ body { background: var(--bg-app); color: var(--text-main); font-family: 'Inter',
   .name-row { flex-direction: column; gap: 10px; }
   .profile-tabs { justify-content: center; }
   .mundo-bento-grid-3 { grid-template-columns: 1fr; }
-  .memory-bento-card { height: auto; }
-  .history-bento-card { height: auto; }
 }
 
 @media (max-width: 800px) {
